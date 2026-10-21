@@ -4,6 +4,7 @@ export * from "./qs.js";
 export * from "./commercial.js";
 export * from "./consolidated.js";
 export * from "./weather.js";
+export * from "./estimate.js";
 export * from "./weatherTool.js";
 export * as weatherSetup from "./weatherSetup.js";
 export * from "./schedule.js";
