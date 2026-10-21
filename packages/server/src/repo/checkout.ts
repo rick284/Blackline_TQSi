@@ -65,11 +65,16 @@ export async function checkInPackage(db: Db, ctx: Ctx, packageId: string, baseVe
       await audit(t, ctx, "package.checkin_refused", { jobId: pkg.job_id, packageId: pkg.id, detail: { reason: r.reason, baseVersion, parkedId: parked.id } });
       return { accepted: false, reason: r.reason, message: REASON_TEXT[r.reason], parkedId: parked.id } as const;
     }
-    for (const [recordId, data] of Object.entries(changes.upserts))
+    for (const [recordId, data] of Object.entries(changes.upserts)) {
+      await t.query("insert into record_versions (package_id, org_id, record_id, version, data) values ($1, $2, $3, $4, $5)", [pkg.id, ctx.orgId, recordId, r.version, JSON.stringify(data)]);
       await t.query(
         `insert into package_records (package_id, org_id, record_id, data) values ($1, $2, $3, $4)
          on conflict (package_id, record_id) do update set data = excluded.data`, [pkg.id, ctx.orgId, recordId, JSON.stringify(data)]);
-    for (const recordId of changes.deletes) await t.query("delete from package_records where package_id = $1 and record_id = $2", [pkg.id, recordId]);
+    }
+    for (const recordId of changes.deletes) {
+      await t.query("delete from package_records where package_id = $1 and record_id = $2", [pkg.id, recordId]);
+      await t.query("insert into record_versions (package_id, org_id, record_id, version, data) values ($1, $2, $3, $4, null)", [pkg.id, ctx.orgId, recordId, r.version]);
+    }
     await t.query("update packages set version = $2 where id = $1", [pkg.id, r.version]);
     await t.query("delete from locks where package_id = $1", [pkg.id]);
     await audit(t, ctx, "package.checked_in", { jobId: pkg.job_id, packageId: pkg.id, detail: { version: r.version, upserts: Object.keys(changes.upserts).length, deletes: changes.deletes.length } });
@@ -108,15 +113,25 @@ export async function breakPackageLock(db: Db, ctx: Ctx, packageId: string): Pro
 
 export async function listParked(db: Db, ctx: Ctx, jobId: string) {
   await getJob(db, ctx, jobId);
-  return (await db.query(
+  const rows = (await db.query<any>(
     `select c.id, c.package_id, p.name as package_name, c.holder, u.name as holder_name, c.base_version, c.reason, c.changes, c.created_at
        from parked_changes c
        join packages p on p.id = c.package_id and p.org_id = c.org_id
        join users u on u.id = c.holder
       where p.job_id = $1 and c.org_id = $2 and c.resolved_at is null
       order by c.created_at`, [jobId, ctx.orgId])).rows;
+  // For every record the refused check-in touched, what it was at the version they checked out: the common starting point that lets a
+  // person see what they actually changed. A record that did not exist then has no entry.
+  for (const r of rows) {
+    const ids = [...Object.keys(r.changes.upserts ?? {}), ...(r.changes.deletes ?? [])];
+    const base = (await db.query<{ record_id: string; data: unknown }>(
+      `select distinct on (record_id) record_id, data from record_versions
+        where package_id = $1 and org_id = $2 and record_id = any($3) and version <= $4
+        order by record_id, version desc`, [r.package_id, ctx.orgId, ids, r.base_version])).rows;
+    r.base = Object.fromEntries(base.map((b) => [b.record_id, b.data]));
+  }
+  return rows;
 }
-
 /** A manager records that a parked change has been dealt with (brought across by a normal checkout, or set aside). */
 export async function resolveParked(db: Db, ctx: Ctx, parkedId: string): Promise<void> {
   requireRole(ctx, "manager");

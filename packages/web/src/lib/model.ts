@@ -32,10 +32,29 @@ export interface BuildupRow {
   resource: string;
 }
 
+export interface LibraryRow {
+  recordId: string;
+  packageId: string;
+  code: string;
+  category: string;
+  description: string;
+  unit: string;
+  baseRate: string;
+  operatorIncluded: string;
+  fuelIncluded: string;
+  source: string;
+  /** Build-up rows that use this rate, and the cost they carry at today's rates */
+  usedBy: number;
+  cost: Dec;
+}
+
 export interface Model {
   estimate: ReturnType<typeof computeTenderEstimate>;
   qsRows: QsRow[];
   buildups: Map<string, BuildupRow[]>;
+  library: LibraryRow[];
+  /** The package that holds the rate library ('' when the job has none) */
+  libraryPackageId: string;
   /** QS code -> the package that holds it */
   packageOfQs: Map<string, string>;
   /** Build-up cost whose QS code is not in the takeoff: it still counts in the price, so the screen says so. */
@@ -82,7 +101,17 @@ export function buildModel(records: ServerRecord[]): Model {
       });
     }
   }
-  return { estimate, qsRows, buildups, packageOfQs, orphanCost: estimate.qs.orphanCost };
+  const usage = new Map<string, { n: number; cost: Dec }>();
+  coded.forEach((src, i) => {
+    const u = usage.get(src.resourceCode) ?? { n: 0, cost: ZERO };
+    usage.set(src.resourceCode, { n: u.n + 1, cost: u.cost.plus(estimate.rows[i]!.cost) });
+  });
+  const library: LibraryRow[] = inputs.library.map((l) => ({
+    recordId: `library:${l.code}`, packageId: pkgOf.get(`library:${l.code}`) ?? "", code: l.code, category: String(l.category ?? ""), description: String(l.description ?? ""),
+    unit: String(l.unit ?? ""), baseRate: String(l.baseRate ?? ""), operatorIncluded: String(l.operatorIncluded ?? ""), fuelIncluded: String(l.fuelIncluded ?? ""),
+    source: String(l.source ?? ""), usedBy: usage.get(l.code)?.n ?? 0, cost: usage.get(l.code)?.cost ?? ZERO,
+  }));
+  return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);

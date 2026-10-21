@@ -59,6 +59,13 @@ export function editRecord(drafts: Drafts, server: ServerRecord[], packageId: st
   return withDraft(drafts, packageId, recordId, base && same(base.data, next) ? undefined : next);
 }
 
+/** Set a record to exactly this (or delete it with null). Setting it back to what the server has is no change at all. */
+export function setRecord(drafts: Drafts, server: ServerRecord[], packageId: string, recordId: string, data: RecordData | null): Drafts {
+  if (data === null) return deleteRecord(drafts, server, packageId, recordId);
+  const base = server.find((r) => r.packageId === packageId && r.id === recordId);
+  return withDraft(drafts, packageId, recordId, base && same(base.data, data) ? undefined : data);
+}
+
 /** A record made in the draft (a new build-up row, say). */
 export function addRecord(drafts: Drafts, packageId: string, recordId: string, data: RecordData): Drafts {
   return withDraft(drafts, packageId, recordId, data);

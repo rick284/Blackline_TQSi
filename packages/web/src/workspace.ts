@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RecordData } from "@blackline/tender/core";
 import { api, ApiError, useConnection } from "./api.js";
-import { addRecord, changeSetOf, countChanges, deleteRecord, discardPackage, editRecord, effectiveRecords, type Drafts, type ServerRecord } from "./lib/draft.js";
+import { addRecord, changeSetOf, countChanges, deleteRecord, discardPackage, editRecord, effectiveRecords, setRecord, type Drafts, type ServerRecord } from "./lib/draft.js";
+import type { Parked } from "./lib/parked.js";
 import { kv } from "./lib/kv.js";
 import { buildModel, nextUid } from "./lib/model.js";
 import { flushQueue, type SendOutcome } from "./lib/queue.js";
@@ -37,6 +38,7 @@ export function useWorkspace(jobId: string, session: Session) {
   const conn = useConnection();
   const [records, setRecords] = useState<ServerRecord[] | null>(null);
   const [packages, setPackages] = useState<PackageSummary[]>([]);
+  const [parked, setParked] = useState<Parked[]>([]);
   const [saved, setSaved] = useState<Saved>(() => read<Saved>(wsKey(jobId), { drafts: {}, held: {} }));
   const [loading, setLoading] = useState(true);
   const [fromCache, setFromCache] = useState(false);
@@ -60,6 +62,8 @@ export function useWorkspace(jobId: string, session: Session) {
       setPackages(r.packages);
       setFromCache(false);
       void kv.set(cacheKey(jobId), r);
+      // changes the server refused and kept: a person compares them on the Parked changes screen
+      api<Parked[]>("GET", `/jobs/${jobId}/parked`).then((p) => alive.current && setParked(p)).catch(() => undefined);
     } catch (e) {
       const c = e instanceof ApiError && e.status === 0 ? await kv.get<Loaded>(cacheKey(jobId)) : undefined;
       if (!alive.current) return;
@@ -177,6 +181,12 @@ export function useWorkspace(jobId: string, session: Session) {
     else if (wasOffline.current && waiting === 0) { wasOffline.current = false; void load(); }
   }, [conn, waiting, load]);
 
+  const resolveParked = useCallback((id: string) => run(async () => {
+    await api("POST", `/parked/${id}/resolve`);
+    setParked((p) => p.filter((x) => x.id !== id));
+    setNotice({ kind: "info", text: "Marked as dealt with." });
+  }), [run]);
+
   const release = useCallback((id: string) => run(async () => {
     if (countChanges(savedRef.current.drafts, id) && !window.confirm("Discard your unsaved changes and release this package?")) return;
     await api("POST", `/packages/${id}/release`);
@@ -211,18 +221,31 @@ export function useWorkspace(jobId: string, session: Session) {
     persist({ ...savedRef.current, drafts: addRecord(savedRef.current.drafts, packageId, `row:${uid}`, data) });
   }, [records, canEdit, effective, persist]);
 
+  /** Put a whole record (or its deletion) into the draft, for bringing a parked change across. */
+  const adopt = useCallback((packageId: string, recordId: string, data: RecordData | null) => {
+    if (!records || !canEdit(packageId)) return;
+    persist({ ...savedRef.current, drafts: setRecord(savedRef.current.drafts, records, packageId, recordId, data) });
+  }, [records, canEdit, persist]);
+
+  const addRate = useCallback((packageId: string, code: string) => {
+    if (!records || !canEdit(packageId)) return;
+    const seq = 1 + Math.max(0, ...effective.filter((r) => r.data.kind === "library").map((r) => r.data.seq ?? 0));
+    const data: RecordData = { kind: "library", seq, body: { code, description: "", unit: "", baseRate: "0", category: "", operatorIncluded: "", fuelIncluded: "", source: "" } };
+    persist({ ...savedRef.current, drafts: addRecord(savedRef.current.drafts, packageId, `library:${code}`, data) });
+  }, [records, canEdit, effective, persist]);
+
   const removeRow = useCallback((packageId: string, recordId: string) => {
     if (!records || !canEdit(packageId)) return;
     persist({ ...savedRef.current, drafts: deleteRecord(savedRef.current.drafts, records, packageId, recordId) });
   }, [records, canEdit, persist]);
 
   return {
-    loading, fromCache, records, packages, model, drafts, notice, busy, queued,
+    loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
-    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, edit, addRow, removeRow, dismiss: () => setNotice(null),
+    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, addRate, removeRate: removeRow, dismiss: () => setNotice(null),
   };
 }
 

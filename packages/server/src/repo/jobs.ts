@@ -74,6 +74,7 @@ export async function seedPackages(db: Db, ctx: Ctx, jobId: string, seeds: SeedP
       const pkg = (await t.query<{ id: string }>("insert into packages (org_id, job_id, key, name, kind) values ($1, $2, $3, $4, $5) returning id", [ctx.orgId, jobId, s.key, s.name, s.kind])).rows[0]!;
       for (const [recordId, data] of Object.entries(s.records)) {
         await t.query("insert into package_records (package_id, org_id, record_id, data) values ($1, $2, $3, $4)", [pkg.id, ctx.orgId, recordId, JSON.stringify(data)]);
+        await t.query("insert into record_versions (package_id, org_id, record_id, version, data) values ($1, $2, $3, 1, $4)", [pkg.id, ctx.orgId, recordId, JSON.stringify(data)]);
         records++;
       }
     }

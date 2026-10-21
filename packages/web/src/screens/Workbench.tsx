@@ -1,12 +1,11 @@
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, ColGroupDef, GridApi, RowClassParams } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useConnection } from "../api.js";
 import { gridTheme, monoCell } from "../grid.js";
 import { parseNumberCell } from "../lib/draft.js";
 import { money, num } from "../lib/fmt.js";
 import { isBlocking, total, type BuildupRow, type QsRow } from "../lib/model.js";
-import { useSession } from "../session.js";
+import { PackageBar } from "./PackageBar.js";
 import type { Workspace } from "../workspace.js";
 
 const MODES = ["Time x Count", "QS Qty x Factor", "Direct Qty", "Lump Sum / Quote"];
@@ -36,8 +35,6 @@ function rowData(r: BuildupRow): RowData {
  * calculated. Inputs are editable only on a package you have checked out; every edit recalculates the whole job on this computer.
  */
 export function Workbench({ ws }: { ws: Workspace }) {
-  const { session } = useSession();
-  const conn = useConnection();
   const model = ws.model!;
   const items = model.qsRows.filter((r) => r.kind === "item");
   const [selectedQs, setSelectedQs] = useState<string | null>(null);
@@ -51,14 +48,7 @@ export function Workbench({ ws }: { ws: Workspace }) {
   }, [selectedQs, model]);
 
   const pkgId = selectedQs ? model.packageOfQs.get(selectedQs) ?? "" : "";
-  const pkg = ws.pkg(pkgId);
-  const mine = ws.isMine(pkgId);
   const editable = ws.canEdit(pkgId);
-  const holder = pkg?.lock ? (mine ? "you" : pkg.lock.holder_name) : null;
-  const canWrite = session!.role !== "viewer";
-  const isManager = session!.role === "manager" || session!.role === "owner";
-  const online = conn === "online";
-  const changes = ws.changes(pkgId);
 
   const qsRows: QsData[] = useMemo(
     () => model.qsRows.map((r) => {
@@ -151,27 +141,10 @@ export function Workbench({ ws }: { ws: Workspace }) {
 
   return (
     <>
-      <div className="toolbar" role="toolbar" aria-label="Package">
-        <div className="group">
-          <span className="label">Package</span>
-          <strong>{pkg?.name ?? "—"}</strong>
-          {holder === null ? <span className="badge">Free</span> : mine ? <span className="badge solid">{ws.queued[pkgId] ? "Check-in queued" : "Checked out by you"}</span> : <span className="badge grey">Held by {holder}</span>}
-          <span className="muted">v{pkg?.version ?? "—"}</span>
-        </div>
-        <div className="group">
-          <button className="btn primary" disabled={!canWrite || !pkg || !!pkg.lock || !online || ws.busy} onClick={() => ws.checkOut(pkgId)} title={online ? "" : "Checking out needs a connection"}>Check out</button>
-          <button className="btn primary" disabled={!mine || ws.busy || !!ws.queued[pkgId]} onClick={() => ws.checkIn(pkgId)} title={online ? "" : "Offline: this will be queued and sent when you reconnect"}>Check in{changes ? ` (${changes})` : ""}{online ? "" : " when online"}</button>
-          {ws.queued[pkgId] && <button className="btn" onClick={() => ws.cancelQueued(pkgId)}>Cancel queued check-in</button>}
-          <button className="btn" disabled={!mine || !online || ws.busy} onClick={() => ws.release(pkgId)}>Release</button>
-          {isManager && pkg?.lock && !mine && <button className="btn" disabled={!online || ws.busy} onClick={() => ws.breakLock(pkgId)}>Break lock</button>}
-        </div>
-        <div className="group">
-          <button className="btn" disabled={!editable || !selectedQs} onClick={() => selectedQs && ws.addRow(pkgId, selectedQs)}>Add row</button>
-          <button className="btn" disabled={!editable || !selectedRow} onClick={() => { const r = buildRows.find((x) => x.rowId === selectedRow); if (r) { ws.removeRow(r.packageId, r.recordId); setSelectedRow(null); } }}>Delete row</button>
-        </div>
-        {editable && <span className="muted">White cells are yours to change. Shaded cells are calculated.</span>}
-        {!editable && pkg && <span className="muted">{holder === null ? "Check this package out to change it." : mine ? "" : `Read-only: ${holder} has this package.`}</span>}
-      </div>
+      <PackageBar ws={ws} pkgId={pkgId}>
+        <button className="btn" disabled={!editable || !selectedQs} onClick={() => selectedQs && ws.addRow(pkgId, selectedQs)}>Add row</button>
+        <button className="btn" disabled={!editable || !selectedRow} onClick={() => { const r = buildRows.find((x) => x.rowId === selectedRow); if (r) { ws.removeRow(r.packageId, r.recordId); setSelectedRow(null); } }}>Delete row</button>
+      </PackageBar>
       {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
       {!ws.notice && orphan && <div className="notice warn">${money(model.orphanCost)} of build-up cost has no QS item. It is in the price; assign or remove those rows.</div>}
       <div className="workbench">

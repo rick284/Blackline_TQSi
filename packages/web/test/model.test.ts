@@ -69,6 +69,59 @@ describe("workbench model", () => {
   });
 });
 
+describe("rate library model", () => {
+  const withLibrary: TenderInputs = {
+    ...tiny,
+    library: [
+      { code: "LAB", category: "Labour", description: "Labourer", unit: "hr", baseRate: "50", operatorIncluded: "No", fuelIncluded: "", source: "Quote 1" },
+      { code: "SPARE", category: "Plant", description: "Unused plant", unit: "hr", baseRate: "100" },
+    ],
+    qs: [{ code: "EW01", section: "Earthworks", description: "Strip", unit: "m2", quantity: "100" }],
+    rows: [
+      { qsCode: "EW01", mode: "Time x Count", resourceType: "Labour", resourceCode: "LAB", productivityRate: "10", count: "2", verified: "Yes", uid: "EW01-001" },
+      { qsCode: "EW01", mode: "Direct Qty", resourceType: "Labour", resourceCode: "LAB", manualQty: "4", verified: "Yes", uid: "EW01-002" },
+    ],
+    overlays: [],
+  };
+
+  it("lists each rate with the rows that use it and the cost they carry", () => {
+    const m = buildModel(asServer(withLibrary));
+    const lab = m.library.find((r) => r.code === "LAB")!;
+    expect([lab.usedBy, lab.cost.toString()]).toEqual([2, "1200"]); // 10 hours x 2 x $50, plus 4 x $50
+  });
+});
+describe("rate library edits", () => {
+  const lib: TenderInputs = {
+    ...tiny,
+    library: [{ code: "LAB", category: "Labour", description: "Labourer", unit: "hr", baseRate: "50" }, { code: "SPARE", category: "Plant", description: "Unused", unit: "hr", baseRate: "100" }],
+    qs: [{ code: "EW01", section: "Earthworks", description: "Strip", unit: "m2", quantity: "100" }],
+    rows: [{ qsCode: "EW01", mode: "Direct Qty", resourceType: "Labour", resourceCode: "LAB", manualQty: "4", verified: "Yes", uid: "EW01-001" }],
+    overlays: [],
+  };
+
+  it("reprices every row that uses a rate when the rate changes, and an unused rate carries nothing", () => {
+    const server = asServer(lib);
+    const libPkg = server.find((r) => r.id === "library:LAB")!.packageId;
+    const before = buildModel(effectiveRecords(server, {}));
+    expect(before.libraryPackageId).toBe(libPkg);
+    const spare = before.library.find((r) => r.code === "SPARE")!;
+    expect([spare.usedBy, spare.cost.toString()]).toEqual([0, "0"]);
+    const drafts = editRecord({}, server, libPkg, "library:LAB", (b) => ({ ...b, baseRate: "60" }));
+    const after = buildModel(effectiveRecords(server, drafts));
+    expect(after.library.find((r) => r.code === "LAB")!.cost.toString()).toBe("240"); // 4 x $60, was 4 x $50
+    expect(before.estimate.qs.totalDirect.toString()).toBe("200");
+    expect(after.estimate.qs.totalDirect.toString()).toBe("240");
+  });
+
+  it("shows a newly added rate straight away, in the library package", () => {
+    const server = asServer(lib);
+    const libPkg = server.find((r) => r.id === "library:LAB")!.packageId;
+    const drafts = addRecord({}, libPkg, "library:LAB-CARP", { kind: "library", seq: 9, body: { code: "LAB-CARP", description: "", unit: "", baseRate: "0", category: "", operatorIncluded: "", fuelIncluded: "", source: "" } });
+    const m = buildModel(effectiveRecords(server, drafts));
+    const carp = m.library.find((r) => r.code === "LAB-CARP")!;
+    expect([carp.packageId, carp.usedBy]).toEqual([libPkg, 0]);
+  });
+});
 const FILE = new URL("../../../private/Rev34E.xlsx", import.meta.url);
 describe.skipIf(!existsSync(FILE))("workbench model on Hobsonville", () => {
   it("shows the workbook's totals, and one edit moves the price by the engine's amount", async () => {

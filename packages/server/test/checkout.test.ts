@@ -171,4 +171,33 @@ describe("checkout and check-in over the API", () => {
     const ids = r.body.records.map((x: any) => x.id);
     expect(ids).toContain("row:EW01-001");
     expect(r.body.records.find((x: any) => x.id === "row:EW01-001").packageId).toBe(t.ew);
+  });  it("says what a parked change was based on, so only what they changed can be compared", async () => {
+    const t = await setup("Base Co");
+    await t.carlo.client.post(`/packages/${t.ew}/checkout`);                                  // Carlo takes version 1 ...
+    await t.manager.client.post(`/packages/${t.ew}/break-lock`);                              // ... his lock is broken ...
+    await t.rick.client.post(`/packages/${t.ew}/checkout`);
+    await t.rick.client.post(`/packages/${t.ew}/checkin`, { baseVersion: 1, upserts: ewEdit("12000"), deletes: [] }); // ... and Rick changes the rate (version 2)
+    const late = await t.carlo.client.post(`/packages/${t.ew}/checkin`, { baseVersion: 1, upserts: ewEdit("9000"), deletes: ["qs:EW01"] });
+    expect(late.status).toBe(409);
+    const parked = (await t.manager.client.get(`/jobs/${t.jobId}/parked`)).body as any[];
+    expect(parked[0].base["row:EW01-001"].body.jobRateOverride).toBe("10000"); // what it was at version 1, not Rick's 12,000
+    expect(parked[0].base["qs:EW01"].body.code).toBe("EW01");                  // a record they deleted is described too
+    expect(parked[0].base_version).toBe(1);
+  });
+
+  it("keeps each record's value at each version", async () => {
+    const t = await setup("History Co");
+    await t.carlo.client.post(`/packages/${t.ew}/checkout`);
+    await t.carlo.client.post(`/packages/${t.ew}/checkin`, { baseVersion: 1, upserts: ewEdit("11000"), deletes: ["qs:EW01"] });
+    const v = (await s.db.query<{ version: number; data: any }>("select version, data from record_versions where package_id = $1 and record_id = $2 order by version", [t.ew, "row:EW01-001"])).rows;
+    expect(v.map((x) => [x.version, x.data.body.jobRateOverride])).toEqual([[1, "10000"], [2, "11000"]]);
+    const gone = (await s.db.query<{ version: number; data: any }>("select version, data from record_versions where package_id = $1 and record_id = 'qs:EW01' order by version", [t.ew])).rows;
+    expect(gone.map((x) => [x.version, x.data === null])).toEqual([[1, false], [2, true]]);
+  });
+
+  it("refuses a check-in that both changes and deletes the same record", async () => {
+    const t = await setup("Overlap Co");
+    await t.carlo.client.post(`/packages/${t.ew}/checkout`);
+    const r = await t.carlo.client.post(`/packages/${t.ew}/checkin`, { baseVersion: 1, upserts: ewEdit("1"), deletes: ["row:EW01-001"] });
+    expect(r.status).toBe(400);
   });});

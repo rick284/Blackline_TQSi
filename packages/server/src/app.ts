@@ -36,7 +36,7 @@ const changeSet = z.object({
   baseVersion: z.number().int().min(1),
   upserts: z.record(z.string().min(1).max(200), record).default({}),
   deletes: z.array(z.string().min(1).max(200)).default([]),
-});
+}).refine((c) => !c.deletes.some((d) => d in c.upserts), { message: "A record cannot be both changed and deleted in the same check-in.", path: ["deletes"] });
 
 const PUBLIC = new Set(["/health", "/auth/register", "/auth/login"]);
 
