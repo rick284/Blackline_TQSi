@@ -83,6 +83,26 @@ export async function seedPackages(db: Db, ctx: Ctx, jobId: string, seeds: SeedP
   });
 }
 
+/**
+ * The Gantt package, added to a job that has none (jobs made before the Gantt existed, and new ones). Anyone who can check packages out may
+ * start it; asking again changes nothing and returns the one already there.
+ */
+export async function ensurePackage(db: Db, ctx: Ctx, jobId: string, seed: SeedPackage): Promise<{ created: boolean; packageId: string }> {
+  requireRole(ctx, "estimator");
+  return db.tx(async (t) => {
+    await getJob(t, ctx, jobId);
+    const have = (await t.query<{ id: string }>("select id from packages where job_id = $1 and org_id = $2 and key = $3", [jobId, ctx.orgId, seed.key])).rows[0];
+    if (have) return { created: false, packageId: have.id };
+    const pkg = (await t.query<{ id: string }>("insert into packages (org_id, job_id, key, name, kind) values ($1, $2, $3, $4, $5) returning id", [ctx.orgId, jobId, seed.key, seed.name, seed.kind])).rows[0]!;
+    for (const [recordId, data] of Object.entries(seed.records)) {
+      await t.query("insert into package_records (package_id, org_id, record_id, data) values ($1, $2, $3, $4)", [pkg.id, ctx.orgId, recordId, JSON.stringify(data)]);
+      await t.query("insert into record_versions (package_id, org_id, record_id, version, data) values ($1, $2, $3, 1, $4)", [pkg.id, ctx.orgId, recordId, JSON.stringify(data)]);
+    }
+    await audit(t, ctx, "package.created", { jobId, detail: { key: seed.key, records: Object.keys(seed.records).length } });
+    return { created: true, packageId: pkg.id };
+  });
+}
+
 export interface PackageDetail {
   id: string;
   key: string;

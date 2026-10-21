@@ -1,4 +1,4 @@
-import { loadMasterWorkbook, splitIntoPackages } from "@blackline/tender";
+import { gantt, loadMasterWorkbook, splitIntoPackages } from "@blackline/tender";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z, ZodError, type ZodType } from "zod";
 import type { Db } from "./db.js";
@@ -109,6 +109,16 @@ export function buildApp(db: Db): FastifyInstance {
   });
   app.get("/jobs/:jobId/estimate",async (req) => computeJobEstimate(db, ctx(req), idParam((req.params as any).jobId)));
   app.get("/jobs/:jobId/parked", async (req) => co.listParked(db, ctx(req), idParam((req.params as any).jobId)));
+
+  // the Gantt gets its own package, so a planner can hold it while an estimator holds the programme
+  app.post("/jobs/:jobId/gantt", async (req, reply) => {
+    const v = parse(z.object({ name: z.string().trim().min(1).max(200).optional(), start: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/).optional() }), req.body ?? {});
+    const jobId = idParam((req.params as any).jobId);
+    const job = await jobs.getJob(db, ctx(req), jobId);
+    const start = v.start ? (v.start.length === 10 ? `${v.start}T08:00:00` : v.start.length === 16 ? `${v.start}:00` : v.start) : `${new Date().toISOString().slice(0, 10)}T08:00:00`;
+    const r = await jobs.ensurePackage(db, ctx(req), jobId, gantt.ganttSeedPackage(gantt.newProject(start, v.name ?? (job as any).name ?? "Project")));
+    return reply.status(r.created ? 201 : 200).send(r);
+  });
 
   app.post("/jobs/:jobId/import-workbook", async (req, reply) => {
     const jobId = idParam((req.params as any).jobId);
