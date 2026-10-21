@@ -30,17 +30,18 @@ describe("committed, spent and forecast", () => {
     const r = K.costControl(ledger);
     expect([s(line(r, "EW01").actual), s(line(r, "EW01").etc), s(line(r, "EW01").forecastFinal), line(r, "EW01").etcManual, line(r, "EW01").status]).toEqual(["3000", "37000", "40000", false, "Tracking OK"]);
     expect([s(r.project.actualCostToDate), s(r.project.forecastFinalCost), s(r.project.forecastFinalProfit), s(r.project.forecastFinalMarginPct), s(r.project.actualLabourHours)]).toEqual(["7000", "80000", "20000", "20", "10"]);
-    expect(r.alerts).toEqual([]);
+    expect(r.warnings).toEqual([]);
   });
   it("moves the forecast and the margin when a person says a line will cost more", () => {
     const r = K.costControl({ ...ledger, forecasts: [{ code: "EW01", etc: "45000.00" }] });
     expect([s(line(r, "EW01").forecastFinal), s(line(r, "EW01").variance), line(r, "EW01").status, line(r, "EW01").etcManual]).toEqual(["48000", "-8000", "Over Budget", true]);
     expect([s(r.project.forecastFinalCost), s(r.project.forecastFinalProfit), s(r.project.forecastFinalMarginPct), s(r.project.marginDrift)]).toEqual(["88000", "12000", "12", "-8"]);
-    expect(r.alerts).toEqual(["EW01 Earthworks is forecast to finish $8,000.00 over its budget.", "The margin is forecast to finish at 12%, down from 20% at award."]);
+    expect(r.warnings.map((w) => [w.severity, w.warning_type, w.title])).toEqual([["Critical", "Margin Drop", "Forecast margin dropped to 12.0%"], ["High", "Forecast Overrun", "Forecast overrun: EW01 Earthworks"]]);
+    expect(r.warnings[1]!.description).toBe("Forecast to finish $8,000.00 over its budget.");
   });
   it("flags a line that is over by less than 5% as one to watch", () => {
     const r = K.costControl({ ...ledger, forecasts: [{ code: "EW01", etc: "38000.00" }] });
-    expect([line(r, "EW01").status, r.alerts[0]]).toEqual(["Watch", "EW01 Earthworks is forecast to finish $1,000.00 over its budget (less than 5%)."]);
+    expect([line(r, "EW01").status, r.warnings[0]!.severity, r.warnings[0]!.description]).toEqual(["Watch", "Medium", "Forecast to finish $1,000.00 over its budget (less than 5%)."]);
   });
   it("ignores voided entries and says when an order has been invoiced for more than it was", () => {
     const voided = K.costControl({ ...ledger, actuals: ledger.actuals.map((a) => (a.id === "a2" ? { ...a, voided: true } : a)), commitments: [po({ id: "x", voided: true })] });
@@ -48,7 +49,8 @@ describe("committed, spent and forecast", () => {
     const over = K.costControl(base({ commitments: [po()], actuals: [act({ code: "SUB-01", amount: "12000.00", commitmentId: "po1", supplier: "Allied" })] }));
     expect(over.commitments[0]).toMatchObject({ overBilled: true });
     expect(s(over.commitments[0]!.remaining)).toBe("0");
-    expect(over.alerts.some((a) => a.includes("invoiced $2,000.00 more than its order"))).toBe(true);
+    expect(over.warnings.find((w) => w.warning_type === "Order Over-invoiced")!.description).toBe("Invoiced $2,000.00 more than the order of $10,000.00.");
+    expect(over.warnings.find((w) => w.warning_type === "Cost Overrun")).toMatchObject({ severity: "High", title: "Cost overrun: SUB-01 Concrete sub" }); // QSi's own rule on the same line
   });
 });
 
@@ -84,10 +86,71 @@ describe("claims and retention", () => {
   it("takes no retention when none is held, and warns when more than the contract has been claimed", () => {
     const r = K.costControl(base({ claims: [claim({ retentionPct: "0", valueEx: "110000.00" })] }));
     expect([s(r.claims[0]!.retention), s(r.claims[0]!.netEx)]).toEqual(["0", "110000"]);
-    expect(r.alerts).toContain("More than the whole contract has been claimed.");
+    expect(r.warnings.map((w) => w.warning_type)).toContain("Claimed Over Contract");
   });
   it("leaves out voided claims", () => {
     expect(s(K.costControl(base({ claims: [claim({ voided: true })] })).claimed.value)).toBe("0");
+  });
+});
+
+describe("QSi's warnings, on Blackline's records", () => {
+  const today = "2026-11-10";
+  const variation = (o: Partial<K.Variation>): K.Variation => ({ id: "v1", ref: "V07", title: "Extra kerb", status: "pending", sell: "5000.00", lines: [], note: "", ...o });
+  const claim = (o: Partial<K.Claim>): K.Claim => ({ id: "c", seq: 3, periodEnd: "2026-10-31", valueEx: "20000.00", retentionPct: "5", status: "submitted", paidAmount: "0", voided: false, submittedOn: "2026-10-26", ...o });
+  const kinds = (r: K.CostSummary) => r.warnings.map((w) => [w.severity, w.warning_type, w.title]);
+
+  it("a variation sent to the client and not answered by the day they were to reply, in the person's own numbering", () => {
+    const r = K.costControl(base({ variations: [variation({ submittedOn: "2026-10-30", responseDue: "2026-11-06" })] }), { today });
+    expect(kinds(r)).toEqual([["Medium", "Variation Response Overdue", "V07: Response overdue"]]);
+    expect(r.warnings[0]!.description).toBe("Submitted variation response was due 2026-11-06.");
+    expect(kinds(K.costControl(base({ variations: [variation({ submittedOn: "2026-10-30", responseDue: "2026-11-10" })] }), { today }))).toEqual([]); // due today is not late
+  });
+
+  it("work proceeding at risk, and a variation sent with no price", () => {
+    expect(kinds(K.costControl(base({ variations: [variation({ atRisk: true })] }), { today }))).toEqual([["High", "Work Proceeding At Risk", "V07: Work proceeding without approval"]]);
+    expect(kinds(K.costControl(base({ variations: [variation({ submittedOn: "2026-10-30", sell: "0.00" })] }), { today }))).toEqual([["Medium", "Variation No Pricing", "V07: No pricing line items"]]);
+    expect(kinds(K.costControl(base({ variations: [variation({ status: "approved", atRisk: true, submittedOn: "2026-10-01", responseDue: "2026-10-05" })] }), { today }))).toEqual([]); // decided: nothing to chase
+  });
+
+  it("a claim not paid within the contract's working days is Critical, counted from the day it went in and skipping weekends", () => {
+    // sent Mon 26 Oct 2026; 10 working days later is Mon 9 Nov
+    expect(K.addWorkingDays("2026-10-26", 10)).toBe("2026-11-09");
+    expect(K.addWorkingDays("2026-10-30", 1)).toBe("2026-11-02"); // Friday plus one working day is Monday
+    const r = K.costControl(base({ payDays: "10", claims: [claim({})] }), { today });
+    expect(kinds(r)).toEqual([["Critical", "Payment Overdue", "Claim 3: Payment overdue"]]);
+    expect(r.warnings[0]!.description).toBe("Payment was due 2026-11-09.");
+    expect(kinds(K.costControl(base({ payDays: "15", claims: [claim({})] }), { today }))).toEqual([]); // not due yet
+    expect(kinds(K.costControl(base({ claims: [claim({})] }), { today }))).toEqual([]); // the contract says nothing: no date to be late against
+    expect(kinds(K.costControl(base({ payDays: "10", claims: [claim({ status: "draft", submittedOn: null })] }), { today }))).toEqual([]);
+  });
+
+  it("a claim paid for less than was owed is a part payment", () => {
+    // 20,000 less 5% retention, plus GST = 21,850
+    const r = K.costControl(base({ claims: [claim({ status: "paid", paidAmount: "15000.00" })] }), { today });
+    expect(kinds(r)).toEqual([["Medium", "Part Paid Claim", "Claim 3: Only partially paid"]]);
+    expect(r.warnings[0]!.description).toBe("Paid $15,000.00 of $21,850.00 due.");
+    expect(kinds(K.costControl(base({ claims: [claim({ status: "paid", paidAmount: "21850.00" })] }), { today }))).toEqual([]);
+  });
+
+  it("a programme activity past its planned finish and not complete", () => {
+    const r = K.costControl(base(), { today, activities: [{ activity_code: "1.2", activity_name: "Strip topsoil", planned_finish: "2026-11-05", status: "In Progress" }, { activity_code: "1.3", activity_name: "Done", planned_finish: "2026-11-01", status: "Complete" }] });
+    expect(kinds(r)).toEqual([["Medium", "Activity Delayed", "Activity delayed: 1.2: Strip topsoil"]]);
+  });
+
+  it("a risk allowance and the preliminaries are recognised by what they are, so QSi's special rules apply", () => {
+    const withKinds: K.Ledger = base({
+      budget: [...budget, { code: "PG01", description: "Project preliminaries", section: "Preliminaries & General", amount: "5000.00", kind: "qs" }, { code: "CA02", description: "Construction residual risk", section: "Allowances", amount: "4000.00", kind: "allowance" }],
+      actuals: [act({ code: "PG01", amount: "5600.00" }), act({ id: "r", code: "CA02", amount: "3500.00" })],
+    });
+    const r = K.costControl(withKinds, { today });
+    expect(r.warnings.map((w) => w.warning_type)).toEqual(expect.arrayContaining(["Preliminaries Overrun", "Risk Allowance Consumed"]));
+    expect(r.warnings.find((w) => w.warning_type === "Risk Allowance Consumed")!.title).toBe("Risk allowance 88% consumed: CA02 Construction residual risk");
+  });
+
+  it("is most serious first", () => {
+    const r = K.costControl(base({ commitments: [po()], actuals: [act({ code: "SUB-01", amount: "12000.00", commitmentId: "po1" })], variations: [variation({ atRisk: true })] }), { today });
+    const order = ["Critical", "High", "Medium", "Low"];
+    expect(r.warnings.map((w) => order.indexOf(w.severity))).toEqual([...r.warnings.map((w) => order.indexOf(w.severity))].sort());
   });
 });
 

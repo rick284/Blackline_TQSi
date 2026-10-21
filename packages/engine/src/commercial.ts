@@ -1,6 +1,6 @@
 /**
  * Commercial control (budget, forecast, earned value, programme), ported from QSi
- * services/commercial_control_engine.py. Warning generation is not ported yet.
+ * services/commercial_control_engine.py. The warning generators are in warnings.ts.
  */
 import { cents, D, type Dec, ZERO } from "./money.js";
 import type { Num } from "./types.js";

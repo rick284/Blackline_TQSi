@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { costControl as K } from "@blackline/tender/core";
 import { api, ApiError } from "../api.js";
 import { type Action, type ActionHistory, none, record, stepBack, stepForward } from "../lib/actionHistory.js";
-import { type CostData, STATUS_TEXT, summaryOf } from "../lib/costWeb.js";
+import { activitiesOf, type CostData, STATUS_TEXT, summaryOf } from "../lib/costWeb.js";
 import type { ContactRow } from "../lib/enquiries.js";
 import { money } from "../lib/fmt.js";
 import { todayYmd } from "../lib/contractSetup.js";
@@ -32,6 +32,7 @@ export interface CostEnv {
 
 type Tab = "summary" | "commitments" | "costs" | "variations" | "claims";
 const TABS: { key: Tab; label: string }[] = [{ key: "summary", label: "Summary" }, { key: "commitments", label: "Orders" }, { key: "costs", label: "Costs" }, { key: "variations", label: "Variations" }, { key: "claims", label: "Claims" }];
+const SEVERITY_BADGE = { Critical: "red", High: "solid", Medium: "grey", Low: "dashed" } as const;
 export const say = (e: unknown, fallback: string) => (e instanceof ApiError ? (e.status === 0 ? "You are offline. This needs a connection." : e.message) : fallback);
 
 /**
@@ -40,7 +41,6 @@ export const say = (e: unknown, fallback: string) => (e instanceof ApiError ? (e
  * a mistake is voided by a manager, with a reason, and stays in the ledger. Forecasts and the figures here are saved as they are made.
  */
 export function CostControl({ ws, jobId }: { ws: Workspace; jobId: string }) {
-  void ws;
   const { session } = useSession();
   const role = session!.role;
   const [data, setData] = useState<CostData | null>(null);
@@ -79,7 +79,10 @@ export function CostControl({ ws, jobId }: { ws: Workspace; jobId: string }) {
   }
   if (!data) return <div className="docs">{notice ? <div className={`notice ${notice.kind}`} role="alert">{notice.text}</div> : <div className="empty">Loading…</div>}</div>;
 
-  const sum = summaryOf(data);
+  // the Gantt's tasks, so an activity that should have finished and hasn't can be warned about
+  const gtask = new Map((ws.model?.ganttRows ?? []).map((r) => [r.task.uid, r.task]));
+  const activities = activitiesOf((ws.model?.ganttSchedule?.tasks ?? []).map((t) => ({ wbs: t.wbs, name: gtask.get(t.uid)?.name ?? "", finish: t.finish, percent: t.percent, summary: t.summary, active: gtask.get(t.uid)?.active ?? true })));
+  const sum = summaryOf(data, { today: todayYmd(), activities });
   const env: CostEnv = {
     jobId, data, sum, canAdd: role !== "viewer", canManage: role === "manager" || role === "owner", today: todayYmd(),
     codes: K.codesOf(data.contract.lines.map((l) => ({ code: l.code, description: l.description, section: l.section, amount: l.amount })), data.variations), people,
@@ -131,7 +134,20 @@ export function CostControl({ ws, jobId }: { ws: Workspace; jobId: string }) {
               {stat("Claimed", `${sum.claimed.pctOfContract}%`, `$${money(sum.claimed.value)} · $${money(sum.claimed.outstanding)} owing`)}
             </div>
             {sum.pending.count > 0 && <div className="notice warn">{sum.pending.count} variation{sum.pending.count === 1 ? "" : "s"} waiting for a decision: ${money(sum.pending.sell)} to sell, ${money(sum.pending.cost)} of cost. Not in the figures above until approved.</div>}
-            {sum.alerts.length > 0 && <section><h3>To look at</h3><div className="sub-pad">{sum.alerts.map((a) => <div key={a} className="gate block">{a}</div>)}</div></section>}
+            {sum.warnings.length > 0 && (
+              <section>
+                <h3>To look at <span className="sub">{sum.warnings.length} · most serious first</span></h3>
+                <div className="sub-pad">
+                  {sum.warnings.map((w, i) => (
+                    <div key={`${w.warning_type}-${i}`} className={`gate${w.severity === "Critical" || w.severity === "High" ? " block" : ""}`}>
+                      <span className={`badge ${SEVERITY_BADGE[w.severity]}`}>{w.severity}</span> <strong>{w.title}</strong>
+                      <div>{w.description}</div>
+                      <div className="muted">{w.suggested_action}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             <SummaryLines env={env} />
           </>
         )}

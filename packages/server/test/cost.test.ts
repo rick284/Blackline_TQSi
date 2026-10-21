@@ -16,7 +16,7 @@ async function awarded(name: string) {
   const { jobId } = await jobWithEstimate(s, owner);
   const rev = (await owner.post(`/jobs/${jobId}/revisions`, { overrideReason: "Test" })).body;
   expect((await mgr.client.post(`/jobs/${jobId}/award`, { revisionId: rev.id, terms: { retentionPct: "5" } })).status).toBe(201);
-  const summary = async () => { const d = await costData(s.db, await ctxOf(owner), jobId); return K.costControl(ledgerOf(d)); };
+  const summary = async (o: K.CostOptions = {}) => { const d = await costData(s.db, await ctxOf(owner), jobId); return K.costControl(ledgerOf(d), o); };
   return { owner, mgr: mgr.client, est: est.client, vic: vic.client, jobId, summary };
 }
 const day = "2026-11-10";
@@ -94,6 +94,35 @@ describe("variations", () => {
     expect((await t.est.post(`/jobs/${t.jobId}/cost/variations/${v.id}`, { title: "Changed again", sell: "1", lines: [] })).body.error.code).toBe("variation_decided");
     expect((await t.mgr.post(`/jobs/${t.jobId}/cost/variations/${v.id}/decision`, { decision: "rejected", note: "changed my mind" })).body.error.code).toBe("variation_decided");
     await expect(s.db.query("update cost_variations set sell = '1.00' where id = $1", [v.id])).rejects.toThrow(/decided variation cannot be changed/);
+  });
+
+  it("keeps when it was sent, when the client should reply by and whether work has started at risk, and warns when the reply is late", async () => {
+    const t = await awarded("Dates Co");
+    const bad = await t.est.post(`/jobs/${t.jobId}/cost/variations`, { title: "x", sell: "100", submittedOn: "2026-11-06", responseDue: "2026-11-01" });
+    expect([bad.status, bad.body.error.message]).toEqual([400, "The client's reply can't be due before the variation was sent."]);
+    expect((await t.est.post(`/jobs/${t.jobId}/cost/variations`, { title: "x", sell: "100", submittedOn: "2026-02-30" })).status).toBe(400);
+    const v = (await t.est.post(`/jobs/${t.jobId}/cost/variations`, { title: "Extra kerb", sell: "3000", submittedOn: "2026-10-30", responseDue: "2026-11-06" })).body;
+    const read = async () => (await t.owner.get(`/jobs/${t.jobId}/cost`)).body.variations[0];
+    expect(await read()).toMatchObject({ submittedOn: "2026-10-30", responseDue: "2026-11-06", atRisk: false });
+    const late = await t.summary({ today: "2026-11-10" });
+    expect(late.warnings.map((w) => [w.severity, w.title])).toEqual([["Medium", "V01: Response overdue"]]);
+    expect((await t.summary({ today: "2026-11-05" })).warnings).toEqual([]);
+    expect((await t.est.post(`/jobs/${t.jobId}/cost/variations/${v.id}`, { title: "Extra kerb", sell: "3000", submittedOn: "2026-10-30", responseDue: "2026-11-06", atRisk: true })).status).toBe(204);
+    expect(await read()).toMatchObject({ atRisk: true });
+    expect((await t.summary({ today: "2026-11-05" })).warnings.map((w) => w.warning_type)).toEqual(["Work Proceeding At Risk"]);
+    // once approved there is nothing left to chase
+    await t.mgr.post(`/jobs/${t.jobId}/cost/variations/${v.id}/decision`, { decision: "approved" });
+    expect((await t.summary({ today: "2026-11-10" })).warnings).toEqual([]);
+  });
+
+  it("warns that a claim is overdue once the contract's payment days have passed since it went in", async () => {
+    const t = await awarded("Overdue Co");
+    expect((await t.mgr.post(`/jobs/${t.jobId}/contract`, { payDays: "10" })).status).toBe(200);
+    const c = (await t.mgr.post(`/jobs/${t.jobId}/cost/claims`, { periodEnd: "2026-10-31", valueEx: "8000" })).body;
+    await t.mgr.post(`/jobs/${t.jobId}/cost/claims/${c.id}`, { status: "submitted", on: "2026-10-26" });
+    const r = await t.summary({ today: "2026-11-10" });
+    expect(r.warnings.map((w) => [w.severity, w.title, w.description])).toEqual([["Critical", "Claim 1: Payment overdue", "Payment was due 2026-11-09."]]);
+    expect((await t.summary({ today: "2026-11-09" })).warnings).toEqual([]);
   });
 
   it("a rejected one is kept, with the reason, and changes nothing", async () => {

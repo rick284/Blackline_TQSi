@@ -15,7 +15,10 @@
  *
  * Voided entries stay in the ledger and count for nothing.
  */
-import { applyStageRetention, cents, D, type Dec, projectSummary, type ProjectSummary, ZERO } from "@blackline/engine";
+import {
+  type ActivityIn, applyStageRetention, bySeverity, cents, D, type Dec, generateClaimWarnings, generateProgrammeWarnings, generateVariationWarnings, generateWarnings,
+  projectSummary, type ProjectSummary, type Warning, ZERO,
+} from "@blackline/engine";
 
 export class CostError extends Error {}
 
@@ -26,18 +29,24 @@ export const ACTUAL_KINDS = ["invoice", "labour", "plant", "materials", "other"]
 export type ActualKind = (typeof ACTUAL_KINDS)[number];
 export const KIND_LABEL: Record<ActualKind, string> = { invoice: "Invoice", labour: "Labour", plant: "Plant", materials: "Materials", other: "Other" };
 
-export interface BudgetLineIn { code: string; description: string; section: string; amount: string }
+export interface BudgetLineIn { code: string; description: string; section: string; amount: string; kind?: string }
 export interface Commitment { id: string; code: string; supplier: string; ref: string; description: string; amount: string; date: string; voided: boolean }
 export interface Actual { id: string; code: string; kind: ActualKind; supplier: string; ref: string; description: string; amount: string; hours: string; date: string; commitmentId: string | null; voided: boolean }
 export interface VariationLine { code: string; description: string; amount: string }
 export type VariationStatus = "pending" | "approved" | "rejected";
-export interface Variation { id: string; ref: string; title: string; status: VariationStatus; sell: string; lines: VariationLine[]; note: string }
+export interface Variation {
+  id: string; ref: string; title: string; status: VariationStatus; sell: string; lines: VariationLine[]; note: string;
+  /** When it went to the client, when they should reply by, and whether the work has started without approval: what the variation warnings run on */
+  submittedOn?: string | null; responseDue?: string | null; atRisk?: boolean;
+}
 export interface Forecast { code: string; etc: string | null }
 export type ClaimStatus = "draft" | "submitted" | "paid";
-export interface Claim { id: string; seq: number; periodEnd: string; valueEx: string; retentionPct: string; status: ClaimStatus; paidAmount: string; voided: boolean }
+export interface Claim { id: string; seq: number; periodEnd: string; valueEx: string; retentionPct: string; status: ClaimStatus; paidAmount: string; voided: boolean; submittedOn?: string | null }
 
 export interface Ledger {
   contractSum: string;
+  /** Working days the contract allows for payment after a claim (from the contract terms), so an unpaid claim can be seen to be overdue. Blank: not known. */
+  payDays?: string;
   budget: BudgetLineIn[];
   commitments: Commitment[];
   actuals: Actual[];
@@ -79,11 +88,30 @@ export interface CostSummary {
   claimed: { value: Dec; retentionHeld: Dec; netInc: Dec; paid: Dec; outstanding: Dec; pctOfContract: Dec };
   /** Variations asked for and not yet agreed: not in the budget, the contract sum or the forecast margin until approved */
   pending: { count: number; sell: Dec; cost: Dec };
-  /** Plain-language things to look at */
-  alerts: string[];
+  /** Things to look at, most serious first: QSi's commercial warnings, with a few that are Blackline's own (forecast overrun, over-invoiced order, over-claimed contract) */
+  warnings: Warning[];
 }
 
-export function costControl(l: Ledger): CostSummary {
+/** A date `n` working days after `ymd`, skipping Saturdays and Sundays. Public holidays are not known to it, so a due date can be a day or two early. */
+export function addWorkingDays(ymd: string, n: number): string {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  let left = n;
+  while (left > 0) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) left--;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+export interface CostOptions {
+  /** The calendar day the warnings are worked out for (YYYY-MM-DD). Left out, it is today by the computer's clock; pass it for a repeatable answer. */
+  today?: string;
+  /** Programme activities (from the Gantt) so a late one can be warned about */
+  activities?: ActivityIn[];
+}
+
+export function costControl(l: Ledger, o: CostOptions = {}): CostSummary {
   const live = <T extends { voided: boolean }>(xs: T[]) => xs.filter((x) => !x.voided);
   const actuals = live(l.actuals), commitments = live(l.commitments), claims = live(l.claims);
   const approved = l.variations.filter((v) => v.status === "approved");
@@ -105,8 +133,11 @@ export function costControl(l: Ledger): CostSummary {
     const orig = dec(l.budget.find((b) => b.code === code)?.amount);
     const adj = sum(approved.flatMap((v) => v.lines.filter((x) => x.code === code).map((x) => dec(x.amount))));
     const etc = forecast.get(code);
+    const b = l.budget.find((x) => x.code === code);
+    // QSi treats "Preliminaries" and "Risk" lines specially: Blackline's lines are mapped onto those by where they sit and what they are
+    const resource_type = /prelim/i.test(b?.section ?? "") ? "Preliminaries" : b?.kind === "allowance" && /risk|reserve/i.test(description) ? "Risk" : "";
     return {
-      id: code, description, original_total_cost: orig.toString(), approved_variation_cost_adjustment: adj.toString(),
+      id: code, description, resource_type, original_total_cost: orig.toString(), approved_variation_cost_adjustment: adj.toString(),
       actual_cost_to_date: sum(actuals.filter((a) => a.code === code).map((a) => dec(a.amount))).toString(),
       committed_cost: sum(commitRes.filter((c) => c.code === code).map((c) => c.remaining)).toString(),
       forecast_cost_to_complete: etc === null || etc === undefined ? null : etc,
@@ -155,15 +186,51 @@ export function costControl(l: Ledger): CostSummary {
     pctOfContract: project.currentContractValue.gt(0) ? cents(claimedValue.div(project.currentContractValue).times(100)) : ZERO,
   };
 
-  const alerts: string[] = [];
+  // ---- warnings
+  const today = o.today ?? new Date().toISOString().slice(0, 10);
+  const found: Warning[] = generateWarnings(project, { label: (x) => `${String(x.id)} ${String(x.description)}`, resourceType: (x) => String(x.resource_type ?? "") });
+  const overrun = new Set(found.filter((w) => w.warning_type === "Cost Overrun").map((w) => w.commercial_budget_line_id));
+
+  // Blackline's own: a line forecast to overrun before the money has been spent, an order invoiced beyond itself, a contract claimed beyond its sum
   for (const x of lines) {
-    if (x.status === "Over Budget") alerts.push(`${x.code} ${x.description} is forecast to finish ${money(x.variance.neg())} over its budget.`);
-    else if (x.status === "Watch") alerts.push(`${x.code} ${x.description} is forecast to finish ${money(x.variance.neg())} over its budget (less than 5%).`);
+    if (overrun.has(x.code) || (x.status !== "Over Budget" && x.status !== "Watch")) continue;
+    found.push({
+      warning_type: "Forecast Overrun", severity: x.status === "Over Budget" ? "High" : "Medium", title: `Forecast overrun: ${x.code} ${x.description}`,
+      description: `Forecast to finish ${money(x.variance.neg())} over its budget${x.status === "Watch" ? " (less than 5%)" : ""}.`,
+      suggested_action: "Review the forecast, seek variation recovery or find the saving.", commercial_budget_line_id: x.code,
+    });
   }
-  for (const c of commitRes) if (c.overBilled) alerts.push(`${c.supplier} ${c.ref || c.description} has been invoiced ${money(c.billed.minus(dec(c.amount)))} more than its order.`);
-  if (project.marginDrift.lt(0)) alerts.push(`The margin is forecast to finish at ${project.forecastFinalMarginPct}%, down from ${project.originalMarginPct}% at award.`);
-  if (claimed.pctOfContract.gt(100)) alerts.push("More than the whole contract has been claimed.");
-  return { project, lines, commitments: commitRes, claims: claimRes, claimed, pending: { count: pending.length, sell: cents(pendingSell), cost: cents(pendingCost) }, alerts };
+  for (const c of commitRes) {
+    if (c.overBilled) found.push({
+      warning_type: "Order Over-invoiced", severity: "Medium", title: `${[c.supplier, c.ref || c.description].filter(Boolean).join(" ")}: invoiced beyond the order`,
+      description: `Invoiced ${money(c.billed.minus(dec(c.amount)))} more than the order of ${money(dec(c.amount))}.`, suggested_action: "Check the invoices against the order, or raise a variation to the order.",
+    });
+  }
+  if (claimed.pctOfContract.gt(100)) found.push({ warning_type: "Claimed Over Contract", severity: "High", title: "More than the whole contract has been claimed", description: `${claimed.pctOfContract.toString()}% of the contract sum has been claimed.`, suggested_action: "Check the claims against the contract sum and the approved variations." });
+
+  // QSi's variation warnings, from a variation's own dates and flags (the wording says V01, as the person does)
+  const vnum = (ref: string) => Number(/(\d+)\s*$/.exec(ref)?.[1] ?? 0);
+  const refOf = new Map(l.variations.map((v) => [v.id, v.ref]));
+  found.push(...generateVariationWarnings(l.variations.map((v) => ({
+    id: v.id, variation_number: vnum(v.ref), title: v.title,
+    status: v.status === "approved" ? "Approved" : v.status === "rejected" ? "Rejected" : v.atRisk ? "Proceeding At Risk" : v.submittedOn ? "Submitted" : "Draft",
+    response_due_date: v.responseDue ?? "", total_sell_ex_gst: v.sell, approved_sell_ex_gst: v.sell,
+  })), {}, today).map((w) => ({ ...w, title: w.title.replace(/^VO-\d+/, refOf.get(w.variation_id ?? "") ?? "Variation") })));
+
+  // QSi's claim warnings: payment is due the contract's number of working days after the claim went in
+  const payDays = Number(l.payDays ?? "");
+  found.push(...generateClaimWarnings(claimRes.map((c) => ({
+    claim_number: c.seq, status: c.status === "draft" ? "Draft" : c.status === "submitted" ? "Issued" : c.paid.lt(c.netInc) ? "Part Paid" : "Paid",
+    payment_due_date: c.status === "submitted" && c.submittedOn && Number.isFinite(payDays) && payDays > 0 ? addWorkingDays(c.submittedOn, payDays) : "",
+    current_claim_ex_gst: c.value.toString(), amount_due_inc_gst: c.netInc.toString(), paid_amount_inc_gst: c.paid.toString(),
+  })), [], {}, today).map((w) => ({ ...w, title: w.title.replace(/^CLAIM-0*(\d+)/, "Claim $1") })));
+
+  found.push(...generateProgrammeWarnings(o.activities ?? [], [], [], today));
+
+  return {
+    project, lines, commitments: commitRes, claims: claimRes, claimed, pending: { count: pending.length, sell: cents(pendingSell), cost: cents(pendingCost) },
+    warnings: bySeverity(found),
+  };
 }
 
 const money = (x: Dec) => cents(x).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",").replace(/^/, "$");
@@ -226,7 +293,12 @@ export function cleanVariation(v: Record<string, unknown>, codes: Set<string>) {
     seen.add(code);
     return { code, description: text(r?.description, 300, `The description for ${code}`, !codes.has(code)), amount: parseMoney(r?.amount, { allowNegative: true, what: `The cost for ${code}` }) };
   });
-  return { ref: text(v.ref, 40, "The variation number"), title, sell, lines, note: text(v.note, 2000, "The note") };
+  const optionalDate = (x: unknown, what: string) => (x === null || x === undefined || String(x).trim() === "" ? null : parseDate(x, what));
+  const submittedOn = optionalDate(v.submittedOn, "The date it was sent to the client");
+  const responseDue = optionalDate(v.responseDue, "The date the client should reply by");
+  if (submittedOn && responseDue && responseDue < submittedOn) throw new CostError("The client's reply can't be due before the variation was sent.");
+  const atRisk = v.atRisk === true || v.atRisk === "true";
+  return { ref: text(v.ref, 40, "The variation number"), title, sell, lines, note: text(v.note, 2000, "The note"), submittedOn, responseDue, atRisk };
 }
 
 export function cleanForecast(v: Record<string, unknown>, codes: Set<string>) {

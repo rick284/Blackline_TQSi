@@ -34,7 +34,8 @@ export async function costData(db: Db, ctx: Ctx, jobId: string): Promise<CostDat
     id: r.id, code: r.code, kind: r.kind, supplier: r.supplier, ref: r.ref, description: r.description, amount: r.amount, hours: r.hours, date: r.date, commitmentId: r.commitment_id,
     voided: !!r.voided_at, voidReason: r.void_reason, createdBy: r.by, createdAt: r.created_at }));
   const variations = (await q(`select v.*, u.name as by, d.name as decided_name from cost_variations v join users u on u.id = v.created_by left join users d on d.id = v.decided_by where v.job_id = $1 and v.org_id = $2 order by v.created_at, v.id`)).map((r) => ({
-    id: r.id, ref: r.ref, title: r.title, status: r.status, sell: r.sell, lines: r.lines, note: r.note, createdBy: r.by, decidedBy: r.decided_name, decisionNote: r.decision_note }));
+    id: r.id, ref: r.ref, title: r.title, status: r.status, sell: r.sell, lines: r.lines, note: r.note, createdBy: r.by, decidedBy: r.decided_name, decisionNote: r.decision_note,
+    submittedOn: r.submitted_on, responseDue: r.response_due, atRisk: r.at_risk }));
   const forecasts = (await q(`select distinct on (f.code) f.code, f.etc, f.note, u.name as by, f.created_at as at from cost_forecasts f join users u on u.id = f.created_by where f.job_id = $1 and f.org_id = $2 order by f.code, f.id desc`))
     .map((r) => ({ code: r.code, etc: r.etc, note: r.note, by: r.by, at: r.at }));
   const claims = (await q(`select * from payment_claims where job_id = $1 and org_id = $2 order by seq`)).map((r) => ({
@@ -45,7 +46,7 @@ export async function costData(db: Db, ctx: Ctx, jobId: string): Promise<CostDat
 
 /** The ledger as the shared engine takes it, so the server can answer with the same totals the screens show. */
 export const ledgerOf = (d: CostData): K.Ledger => ({
-  contractSum: d.contract.contractSum, budget: d.contract.lines.map((l) => ({ code: l.code, description: l.description, section: l.section, amount: l.amount })),
+  contractSum: d.contract.contractSum, payDays: d.contract.terms.payDays, budget: d.contract.lines.map((l) => ({ code: l.code, description: l.description, section: l.section, amount: l.amount, kind: l.kind })),
   commitments: d.commitments, actuals: d.actuals, variations: d.variations, forecasts: d.forecasts, claims: d.claims,
 });
 
@@ -114,8 +115,8 @@ export async function addVariation(db: Db, ctx: Ctx, jobId: string, v: Record<st
       ref = `V${String(1 + Math.max(0, ...nums)).padStart(2, "0")}`;
     }
     if ((await t.query("select 1 from cost_variations where job_id = $1 and org_id = $2 and ref = $3", [jobId, ctx.orgId, ref])).rows.length) throw new HttpError(409, "variation_exists", `${ref} is already a variation on this job.`);
-    const id = (await t.query<{ id: string }>("insert into cost_variations (org_id, job_id, ref, title, sell, lines, note, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8) returning id",
-      [ctx.orgId, jobId, ref, c.title, c.sell, JSON.stringify(c.lines), c.note, ctx.userId])).rows[0]!.id;
+    const id = (await t.query<{ id: string }>("insert into cost_variations (org_id, job_id, ref, title, sell, lines, note, created_by, submitted_on, response_due, at_risk) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id",
+      [ctx.orgId, jobId, ref, c.title, c.sell, JSON.stringify(c.lines), c.note, ctx.userId, c.submittedOn, c.responseDue, c.atRisk])).rows[0]!.id;
     await audit(t, ctx, "cost.variation", { jobId, detail: { id, ref, sell: c.sell } });
     return { id, ref };
   });
@@ -130,7 +131,8 @@ export async function updateVariation(db: Db, ctx: Ctx, jobId: string, id: strin
     if (!was) throw new HttpError(404, "not_found", "Variation not found.");
     if (was.status !== "pending") throw new HttpError(409, "variation_decided", "That variation has been decided, so it can't be changed.");
     const c = wrap(() => K.cleanVariation({ ...v, ref: was.ref }, codes));
-    await t.query("update cost_variations set title = $4, sell = $5, lines = $6, note = $7 where id = $1 and job_id = $2 and org_id = $3", [id, jobId, ctx.orgId, c.title, c.sell, JSON.stringify(c.lines), c.note]);
+    await t.query("update cost_variations set title = $4, sell = $5, lines = $6, note = $7, submitted_on = $8, response_due = $9, at_risk = $10 where id = $1 and job_id = $2 and org_id = $3",
+      [id, jobId, ctx.orgId, c.title, c.sell, JSON.stringify(c.lines), c.note, c.submittedOn, c.responseDue, c.atRisk]);
     await audit(t, ctx, "cost.variation.updated", { jobId, detail: { id, ref: was.ref } });
   });
 }
