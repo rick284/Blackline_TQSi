@@ -1,4 +1,4 @@
-import { assembleInputs, documents, gantt, loadMasterWorkbook, procurement, splitIntoPackages, submission } from "@blackline/tender";
+import { assembleInputs, documents, gantt, loadMasterWorkbook, procurement, splitIntoPackages, submission, template } from "@blackline/tender";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z, ZodError, type ZodType } from "zod";
 import type { Db } from "./db.js";
@@ -135,6 +135,28 @@ export function buildApp(db: Db): FastifyInstance {
   });
   app.get("/jobs/:jobId/estimate",async (req) => computeJobEstimate(db, ctx(req), idParam((req.params as any).jobId)));
   app.get("/jobs/:jobId/parked", async (req) => co.listParked(db, ctx(req), idParam((req.params as any).jobId)));
+
+  // a tender started from nothing: the standard commercial stack and the packages every tender is built from (an estimator can; an import needs a manager)
+  app.post("/jobs/:jobId/template", async (req, reply) => {
+    const v = parse(z.object({ overheadPct: z.string().max(10).optional(), profitPct: z.string().max(10).optional() }), req.body ?? {});
+    const jobId = idParam((req.params as any).jobId);
+    const job = await jobs.getJob(db, ctx(req), jobId);
+    let seeds;
+    try { seeds = template.blankTender({ project: job.name, overheadPct: v.overheadPct ?? "10", profitPct: v.profitPct ?? "15" }); } catch (e) { throw e instanceof template.TemplateError ? new HttpError(400, "bad_request", e.message) : e; }
+    return reply.status(201).send(await jobs.seedPackages(db, ctx(req), jobId, seeds, "estimator", "job.template"));
+  });
+
+  // a new QS section: a package of its own, so it is checked out like any other
+  app.post("/jobs/:jobId/sections", async (req, reply) => {
+    const v = parse(z.object({ name: z.string().max(200) }), req.body);
+    const jobId = idParam((req.params as any).jobId);
+    const existing = (await jobs.listPackages(db, ctx(req), jobId)).filter((p) => p.kind === "qs-section").map((p) => p.name);
+    let seed;
+    try { seed = template.sectionPackage(v.name, existing); } catch (e) { throw e instanceof template.TemplateError ? new HttpError(400, "bad_request", e.message) : e; }
+    const r = await jobs.ensurePackage(db, ctx(req), jobId, seed);
+    if (!r.created) throw new HttpError(409, "section_exists", `${seed.name} is already a section.`);
+    return reply.status(201).send({ ...r, name: seed.name });
+  });
 
   // the Gantt gets its own package, so a planner can hold it while an estimator holds the programme
   app.post("/jobs/:jobId/gantt", async (req, reply) => {

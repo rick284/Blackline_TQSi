@@ -1,6 +1,6 @@
 import type { RecordData, SeedPackage } from "@blackline/tender";
 import type { Db } from "../db.js";
-import { type Ctx, HttpError, requireRole } from "../errors.js";
+import { type Ctx, HttpError, type Role, requireRole } from "../errors.js";
 import { audit } from "./audit.js";
 import { updateEnquiry } from "./enquiries.js";
 
@@ -79,8 +79,8 @@ export async function listPackages(db: Db, ctx: Ctx, jobId: string): Promise<Pac
 }
 
 /** Load a job's packages and records, for the first time only. A manager does this from an imported workbook or a blank template. */
-export async function seedPackages(db: Db, ctx: Ctx, jobId: string, seeds: SeedPackage[]): Promise<{ packages: number; records: number }> {
-  requireRole(ctx, "manager");
+export async function seedPackages(db: Db, ctx: Ctx, jobId: string, seeds: SeedPackage[], minRole: Role = "manager", via = "job.seeded"): Promise<{ packages: number; records: number }> {
+  requireRole(ctx, minRole);
   return db.tx(async (t) => {
     await getJob(t, ctx, jobId);
     if ((await t.query("select 1 from packages where job_id = $1", [jobId])).rows.length)
@@ -94,7 +94,7 @@ export async function seedPackages(db: Db, ctx: Ctx, jobId: string, seeds: SeedP
         records++;
       }
     }
-    await audit(t, ctx, "job.seeded", { jobId, detail: { packages: seeds.length, records } });
+    await audit(t, ctx, via, { jobId, detail: { packages: seeds.length, records } });
     return { packages: seeds.length, records };
   });
 }

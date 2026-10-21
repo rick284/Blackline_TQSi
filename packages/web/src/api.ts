@@ -41,6 +41,19 @@ const TOKEN_KEY = "bl:token";
 export const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
 export const setToken = (t: string | null) => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* storage unavailable */ } };
 
+/** Send a file as the raw request body (the workbook import). Reports a lost connection the same way `api` does. */
+export async function apiUpload<T = any>(path: string, file: Blob): Promise<T> {
+  const headers: Record<string, string> = { "content-type": "application/octet-stream" };
+  const token = getToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  let res: Response;
+  try { res = await fetch(`/api${path}`, { method: "POST", headers, body: file }); } catch { setConn("offline"); throw new ApiError(0, "offline", "No connection to the server."); }
+  setConn("online");
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? "error", json?.error?.message ?? `Request failed (${res.status}).`, json ?? {});
+  return json as T;
+}
+
 export async function api<T = any>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();

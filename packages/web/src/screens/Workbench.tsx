@@ -1,12 +1,16 @@
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, ColGroupDef, GridApi, RowClassParams } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { D } from "@blackline/engine";
+import { api, ApiError } from "../api.js";
+import { useSession } from "../session.js";
 import { gridTheme, monoCell } from "../grid.js";
 import { parseNumberCell } from "../lib/draft.js";
 import { money, num } from "../lib/fmt.js";
 import { isBlocking, total, type BuildupRow, type QsRow } from "../lib/model.js";
 import { newQsItem, qsDeletion } from "../lib/qs.js";
 import { PackageBar } from "./PackageBar.js";
+import { StartTender } from "./StartTender.js";
 import type { Workspace } from "../workspace.js";
 
 const MODES = ["Time x Count", "QS Qty x Factor", "Direct Qty", "Lump Sum / Quote"];
@@ -38,6 +42,7 @@ function rowData(r: BuildupRow): RowData {
  * calculated. Inputs are editable only on a package you have checked out; every edit recalculates the whole job on this computer.
  */
 export function Workbench({ ws }: { ws: Workspace }) {
+  const { session } = useSession();
   const model = ws.model!;
   const items = model.qsRows.filter((r) => r.kind === "item");
   const [selectedQs, setSelectedQs] = useState<string | null>(null);
@@ -46,6 +51,9 @@ export function Workbench({ ws }: { ws: Workspace }) {
   // a new takeoff line: pinned at the top with its code cell open, like a new line in a spreadsheet
   const [addingItem, setAddingItem] = useState(false);
   const [justAdded, setJustAdded] = useState<string | null>(null);
+  // which section a new item goes into (null = the selected item's own), and the new-section control
+  const [addTarget, setAddTarget] = useState<string | null>(null);
+  const [newSection, setNewSection] = useState<{ open: boolean; name: string }>({ open: false, name: "" });
   const accepted = useRef(false);
   useEffect(() => {
     if (!addingItem) return;
@@ -76,14 +84,37 @@ export function Workbench({ ws }: { ws: Workspace }) {
 
   const pkgId = selectedQs ? model.packageOfQs.get(selectedQs) ?? "" : "";
   const editable = ws.canEdit(pkgId);
+  const sections = ws.packages.filter((p) => p.kind === "qs-section" && p.name !== "Unassigned rows");
+  const targetPkg = addTarget && sections.some((x) => x.id === addTarget) ? addTarget : pkgId || sections[0]?.id || "";
+  const targetSection = ws.pkg(targetPkg)?.name ?? "";
+  const canAdd = !!targetPkg && ws.canEdit(targetPkg);
 
   const qsRows: QsData[] = useMemo(
-    () => model.qsRows.map((r) => {
-      const p = ws.pkg(r.packageId);
-      return { ...r, holder: p?.lock ? (ws.isMine(r.packageId) ? "You" : p.lock.holder_name) : "" };
-    }),
+    () => {
+      const rows = model.qsRows.map((r) => {
+        const p = ws.pkg(r.packageId);
+        return { ...r, holder: p?.lock ? (ws.isMine(r.packageId) ? "You" : p.lock.holder_name) : "" };
+      });
+      // a section with nothing in it yet still shows, so a new section can be seen (and held) before its first item
+      const shown = new Set(rows.filter((r) => r.kind === "section").map((r) => r.section));
+      for (const sec of ws.packages.filter((p) => p.kind === "qs-section" && p.name !== "Unassigned rows" && !shown.has(p.name))) {
+        rows.push({ kind: "section", key: `s:${sec.name}`, code: "", section: sec.name, description: sec.name, unit: "", quantity: "", amount: new D(0), rate: null, rows: 0, flags: 0, recordId: "", packageId: sec.id,
+          holder: sec.lock ? (ws.isMine(sec.id) ? "You" : sec.lock.holder_name) : "" });
+      }
+      return rows;
+    },
     [model, ws.packages], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  const addSection = async () => {
+    try {
+      const r = await api<{ packageId: string; name: string }>("POST", `/jobs/${ws.jobId}/sections`, { name: newSection.name });
+      await ws.load();
+      setNewSection({ open: false, name: "" });
+      setAddTarget(r.packageId);
+      ws.checkOut(r.packageId);
+    } catch (e) { ws.notify({ kind: "warn", text: e instanceof ApiError ? e.message : "The section could not be added." }); }
+  };
   const buildRows = useMemo(() => (selectedQs ? (model.buildups.get(selectedQs) ?? []).map(rowData) : []), [model, selectedQs]);
 
   const textQs = (field: "description" | "unit", headerName: string, o: Partial<ColDef<QsData>> = {}): ColDef<QsData> => ({
@@ -103,10 +134,10 @@ export function Workbench({ ws }: { ws: Workspace }) {
           if (!p.data?.isNew) return false;
           const code = String(p.newValue ?? "").trim();
           if (!code) return false; // left empty: the new line is dropped when editing stops
-          const made = newQsItem(code, p.data.section, items.map((i) => i.code), ws.nextSeq("qs"));
+          const made = newQsItem(code, targetSection, items.map((i) => i.code), ws.nextSeq("qs"));
           if (!made.ok) { ws.notify({ kind: "warn", text: made.error }); return false; }
           accepted.current = true;
-          ws.adopt(pkgId, made.recordId, made.data);
+          ws.adopt(targetPkg, made.recordId, made.data);
           setAddingItem(false);
           setJustAdded(code);
           return false;
@@ -197,12 +228,26 @@ export function Workbench({ ws }: { ws: Workspace }) {
   const totalRow: QsData[] = [{ kind: "section", key: "total", code: "", section: "", description: "Total direct cost", unit: "", quantity: "", amount: total(model.qsRows), rate: null, rows: 0, flags: 0, recordId: "", packageId: "", holder: "" }];
   const rowClass = (p: RowClassParams<QsData>) => (p.data?.key === "total" ? "row-total" : p.data?.kind === "section" ? "row-section" : "");
 
-  if (items.length === 0) return <div className="empty">This job has no QS items yet.</div>;
+  if (ws.packages.length === 0) return <StartTender ws={ws} />;
 
   return (
     <>
-      <PackageBar ws={ws} pkgId={pkgId}>
-        <button className="btn" disabled={!editable || addingItem} onClick={() => setAddingItem(true)} title="A new takeoff item in the same section as the selected one">Add item</button>
+      <PackageBar ws={ws} pkgId={targetPkg}>
+        <label className="muted" style={{ display: "flex", gap: 6, alignItems: "center" }}>Section
+          <select value={targetPkg} aria-label="Section for the new item" onChange={(e) => { setAddTarget(e.target.value); setAddingItem(false); }} style={{ height: 24, border: "1px solid var(--line-strong)", borderRadius: 0, background: "var(--paper)", font: "inherit" }}>
+            {sections.length === 0 && <option value="">No sections yet</option>}
+            {sections.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </select>
+        </label>
+        {newSection.open ? (
+          <>
+            <input autoFocus value={newSection.name} placeholder="Section name" aria-label="New section name" style={{ height: 24, padding: "0 6px", border: "1px solid var(--line-strong)", borderRadius: 0, font: "inherit" }}
+              onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") void addSection(); if (e.key === "Escape") setNewSection({ open: false, name: "" }); }} />
+            <button className="btn primary" disabled={!newSection.name.trim()} onClick={() => void addSection()}>Add section</button>
+            <button className="btn" onClick={() => setNewSection({ open: false, name: "" })}>Cancel</button>
+          </>
+        ) : <button className="btn" disabled={session!.role === "viewer"} onClick={() => setNewSection({ open: true, name: "" })} title="A new QS section: its own package, so it is checked out like the others">New section</button>}
+        <button className="btn" disabled={!canAdd || addingItem} onClick={() => setAddingItem(true)} title={targetPkg && !canAdd ? "Check out this section first" : "A new takeoff item in the chosen section"}>Add item</button>
         <button className="btn" disabled={!editable || !selectedQs} onClick={deleteItem}>Delete item</button>
         <button className="btn" disabled={!editable || !selectedQs} onClick={() => selectedQs && ws.addRow(pkgId, selectedQs)}>Add row</button>
         <button className="btn" disabled={!editable || !selectedRow} onClick={() => { const r = buildRows.find((x) => x.rowId === selectedRow); if (r) { ws.removeRow(r.packageId, r.recordId); setSelectedRow(null); } }}>Delete row</button>
@@ -215,12 +260,12 @@ export function Workbench({ ws }: { ws: Workspace }) {
           <div className="grid">
             <AgGridReact<QsData>
               theme={gridTheme} rowData={qsRows} columnDefs={qsCols} getRowId={(p) => p.data.key} pinnedBottomRowData={totalRow} getRowClass={rowClass}
-              pinnedTopRowData={addingItem ? [blankQs(items.find((i) => i.code === selectedQs)?.section ?? "")] : []}
+              pinnedTopRowData={addingItem ? [blankQs(targetSection)] : []}
               onCellEditingStopped={(e) => { if (e.rowPinned === "top" && !accepted.current) setAddingItem(false); }}
               onGridReady={(e) => { qsApi.current = e.api; }} animateRows={false} suppressMovableColumns singleClickEdit stopEditingWhenCellsLoseFocus
               rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true, isRowSelectable: (n) => n.data?.kind === "item" && !n.data.isNew }}
               onFirstDataRendered={(e) => e.api.forEachNode((n) => n.setSelected(n.data?.kind === "item" && n.data.code === selectedQs))}
-              onSelectionChanged={(e) => { const r = e.api.getSelectedRows()[0]; if (r?.kind === "item") { setSelectedQs(r.code); setSelectedRow(null); } }}
+              onSelectionChanged={(e) => { const r = e.api.getSelectedRows()[0]; if (r?.kind === "item") { setSelectedQs(r.code); setSelectedRow(null); setAddTarget(null); } }}
             />
           </div>
         </section>

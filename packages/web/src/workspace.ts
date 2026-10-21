@@ -355,7 +355,7 @@ export function useWorkspace(jobId: string, session: Session) {
   const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
 
   return {
-    loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
+    jobId, loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,
