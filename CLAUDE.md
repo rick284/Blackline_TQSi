@@ -25,8 +25,10 @@ Built (all with tests, 210 passing):
 - `packages/tender` (TQSi): resource build-up (4 calc modes, QA flags), QS takeoff, commercial stack CA01-CA25, consolidated package, weather allowance, Risk Truth (checked against the workbook's own formulas, 41 golden scenarios), Management Reserve adjudication, NZ labour true-cost build-up (reproduces the NZIQS handbook example), client price schedule mapping, scope coverage, register, quotes, programme/critical path, revision diff, weather tool (NIWA normals, checked against the real tool workbook's golden scenarios), and the assembler `computeTenderEstimate`.
 - `packages/checkout`: lock, check-in, break-lock and parking rules.
 
+- Master Estimate Workbook importer (`src/importers/masterWorkbook.ts`, ExcelJS). It strips XML namespace prefixes and merged-cell ranges first, because the Rev34E file uses `<x:...>` elements and overlapping merges that ExcelJS cannot load. The **Hobsonville Rev34E golden test passes** (`test/golden_hobsonville.test.ts`): every build-up row, QS amounts, section totals, weather allowance, tender chain (614,700.22), consolidated all-in (1,226,916.81), Risk Truth, reserve and the 55-day programme. It needs `private/Rev34E.xlsx` (git-ignored client file; copy from Drive 01_329_Hobsonville_Road_Estimate_Rev34E.xlsx) and skips without it.
+
 Not yet ported from QSi Pro:
-- The Excel importer (`importers/master_workbook.py`), needed to run the Hobsonville Rev34E golden test. Expected: base direct 435,521.88; subtotal 474,995.63; own-works tender 614,700.22; all-in 1,226,916.81; weather allowance 18,204.69; CA16 18,269.06. Needs the workbook locally (Drive: 01_329_Hobsonville_Road_Estimate_Rev34E.xlsx) and a TS xlsx reader.
+- Importer parts: Cover-sheet register, Supplier Quote Register, Scope Coverage, MS Project Import fallback.
 - Edit operations (`edits.py`), blank-tender template, brief, saved-inputs JSON round trip, Excel/PDF outputs.
 - The app layer in QSi Pro `api/` (AI drafting and takeoff, Drive, Gmail, steps, timesheets).
 - QSi warning generators (variation, claim, programme, margin drop).
