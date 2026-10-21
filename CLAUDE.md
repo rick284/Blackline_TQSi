@@ -19,8 +19,18 @@ Estimating and cost-control platform for NZ construction contractors. Read `ARCH
 - `packages/tender` is **TQSi / QSi Pro**: rick284/tender-estimating-platform (`engine/tender_engine`). It carries full precision and **never rounds inside the chain**, as the Master Estimate Workbook does (it displays 2dp but keeps full precision). Round only for display and reconciliation with `cents()`.
 - The TQSi pricing stack lives in one place, `priceStack` in `commercial.ts` (overhead, profit, bonds, finance). Own-works tender, consolidated package and client schedule all use it. Do not re-derive it elsewhere (a QSi Pro review found exactly that bug).
 
+## Server and data model (`packages/server`)
+- Fastify 5 API over Postgres SQL. Schema in `src/migrations/001_init.sql`; run by `migrate()`. Dev and tests use PGlite (a real in-process Postgres); production passes the same SQL to a `pg` pool behind the two-method `Db` interface in `db.ts` (the `pg` adapter is not written yet).
+- **Every tenant table has `org_id`, and child tables reference their parent on `(id, org_id)`**, so a row can never point at another company's data (tested at the database level). Every repository call takes a `Ctx` and filters by `ctx.orgId`. Another company's id gets the same 404 as an id that does not exist.
+- **Checkout is by package, and a package is a QS section** (plus Rate Library, Commercial, Subcontract Packages, Risk and Reserve, Register/Quotes/Scope, Programme and Schedule, Job Settings). `tender/src/packaging.ts` splits a `TenderInputs` into packages and assembles it back; the round trip is exact (tested on Hobsonville). Records are `{kind, seq?, body}`; money is a decimal string inside jsonb, never a float.
+- Check-in runs `@blackline/checkout` as the single authority: the repo loads the package's lock into its Store, asks it, then makes the database match. One transaction per call, `select ... for update` on the package row. A refused check-in is applied nowhere and parked in `parked_changes` for a manager to compare; a manager can break a lock; add-only records need no lock (first write wins).
+- Roles: viewer (read) < estimator (checkout, check-in, add-only records, create jobs) < manager (break locks, import, resolve parked, add estimators/viewers) < owner (adds managers).
+- Auth: scrypt password hashes, opaque session tokens stored as SHA-256, 14-day sessions, minimum password 10 characters. Not done: rate limiting, password reset, email verification, session listing.
+- Endpoints: `/auth/*`, `/me`, `/org/members`, `/audit`, `/jobs`, `/jobs/:id/{packages,estimate,parked,append,import-workbook}`, `/packages/:id/{checkout,checkin,release,break-lock}`, `/parked/:id/resolve`. `GET /jobs/:id/estimate` recalculates from checked-in records with the same engine the clients use.
+- Run: `node --experimental-strip-types packages/server/src/main.ts` (set `DATA_DIR` to keep the database between runs).
+
 ## Status
-Built (all with tests, 210 passing):
+Built (all with tests, 257 passing):
 - `packages/engine` (QSi): cost base with include/exclude, risk rows, register risks, overhead, margin, GST; variations, full-potential scenario; commercial control (budget, forecast, earned value, programme summary); payment schedule and retention. Checked against QSi's 33 server-generated cases. Known difference: QSi rounds with Python floats, so an exact half cent rounds down there and up here (11 cases, `HALF_CENT_TIES`).
 - `packages/tender` (TQSi): resource build-up (4 calc modes, QA flags), QS takeoff, commercial stack CA01-CA25, consolidated package, weather allowance, Risk Truth (checked against the workbook's own formulas, 41 golden scenarios), Management Reserve adjudication, NZ labour true-cost build-up (reproduces the NZIQS handbook example), client price schedule mapping, scope coverage, register, quotes, programme/critical path, revision diff, weather tool (NIWA normals, checked against the real tool workbook's golden scenarios), and the assembler `computeTenderEstimate`.
 - `packages/checkout`: lock, check-in, break-lock and parking rules.
@@ -34,4 +44,4 @@ Not yet ported from QSi Pro:
 - QSi warning generators (variation, claim, programme, margin drop).
 
 The Eastglen spreadsheet's contingency, site overhead and revenue steps are not in either repo's code; its formulas still need explaining.
-Next: Rev34E importer and golden test, then the data model and server (multi-company from the first table), then Rate Library and Estimate screens.
+Next: `pg` adapter and deployment settings, issued (frozen) tender revisions in the schema, blank-tender template, the web client (Rate Library and Estimate screens, status bar showing checked-out packages), Xero link.
