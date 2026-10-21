@@ -137,7 +137,12 @@ export function useWorkspace(jobId: string, session: Session) {
   const { drafts, held } = saved;
   const queued = saved.queued ?? {};
   const effective = useMemo(() => (records ? effectiveRecords(records, drafts) : []), [records, drafts]);
-  const model = useMemo(() => (records ? buildModel(effective) : null), [records, effective]);
+  // A record the engine can't calculate (say, a build-up row with no calculation) must not turn the screen blank: say what is wrong instead.
+  const built = useMemo((): { model: ReturnType<typeof buildModel> | null; error: string | null } => {
+    if (!records) return { model: null, error: null };
+    try { return { model: buildModel(effective), error: null }; } catch (e) { return { model: null, error: e instanceof Error ? e.message : String(e) }; }
+  }, [records, effective]);
+  const model = built.model, modelError = built.error;
 
   const pkg = useCallback((id: string) => packages.find((p) => p.id === id), [packages]);
   /** Whether the estimator holds this package: the server says the lock is theirs. */
@@ -355,7 +360,7 @@ export function useWorkspace(jobId: string, session: Session) {
   const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
 
   return {
-    jobId, loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
+    jobId, loading, fromCache, records, packages, parked, model, modelError, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,

@@ -61,7 +61,7 @@ export function Job({ jobId, view }: { jobId: string; view: View }) {
 
   return (
     <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: name }, { label: MODULES.find((m) => m.view === view)!.label }]} nav={nav} ws={ws} plain={view !== "estimate" && view !== "rates" && view !== "scope" && view !== "commercial" && view !== "programme" && view !== "gantt" && view !== "submission" && view !== "documents" && view !== "procurement" && view !== "contract" && view !== "cost"}>
-      {ws.loading ? <div className="empty">Loading…</div> : !ws.model ? <div className="notice error">{ws.notice?.text ?? "This job could not be loaded."}</div> :
+      {ws.loading ? <div className="empty">Loading…</div> : !ws.model ? <div className="notice error">{ws.notice?.text ?? (ws.modelError ? `This job's records can't be calculated: ${ws.modelError.replace(/\.?\s*$/, ".")} Ask a manager to put it right.` : "This job could not be loaded.")}</div> :
         view === "estimate" ? <Workbench ws={ws} /> : view === "packages" ? <Packages ws={ws} /> : view === "rates" ? <Rates ws={ws} /> : view === "scope" ? <Scope ws={ws} /> : view === "commercial" ? <CommercialReview ws={ws} /> : view === "programme" ? <Programme ws={ws} jobId={jobId} /> : view === "gantt" ? <Gantt ws={ws} jobId={jobId} /> : view === "submission" ? <Submission ws={ws} jobId={jobId} /> : view === "documents" ? <TenderDocuments ws={ws} jobId={jobId} /> : view === "procurement" ? <TenderProcurement ws={ws} jobId={jobId} /> : view === "contract" ? <ContractSetup ws={ws} jobId={jobId} /> : view === "cost" ? <CostControl ws={ws} jobId={jobId} /> : view === "parked" ? <ParkedChanges ws={ws} /> : <Summary ws={ws} />}
     </Shell>
   );

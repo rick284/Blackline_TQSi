@@ -6,19 +6,19 @@
  * value Excel last calculated for it; the platform recalculates everything downstream itself. The values the workbook displayed
  * for its key totals are kept as `reference`, so the platform can prove it reproduces them.
  *
- * Also read: the Cover & Instructions register (documents, assumptions, exclusions, RFIs) and the Supplier Quote Register.
- * Not ported yet: the Scope Coverage sheet (the Hobsonville workbook has none; scope items are added on the Scope Register screen)
- * and the MS Project Import fallback for the programme.
+ * Also read: the Cover & Instructions register (documents, assumptions, exclusions, RFIs), the Supplier Quote Register, the Scope Coverage sheet
+ * (when there is one: the Hobsonville workbook has none), and the MS Project Import table as the programme when there is no usable Programme Export.
  */
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { D, ZERO } from "@blackline/engine";
 import type { TenderInputs, CommercialLine } from "../estimate.js";
 import * as mr from "../managementReserve.js";
-import type { BuildUpRow, LibraryRate, Overlay, QSItem, WeatherToolRun } from "../models.js";
+import { MODES, type BuildUpRow, type LibraryRate, type Overlay, type QSItem, type WeatherToolRun } from "../models.js";
 import type { Programme, ProgrammeTask } from "../programme.js";
 import type { Quote } from "../quotes.js";
 import type { RegisterItem } from "../register.js";
+import { buildItem as buildScopeItem, ScopeError, type ScopeItem } from "../scope.js";
 import { FIELDS as RT_FIELDS, LIMITS as RT_LIMITS, MODES as RT_MODES, OWNERS as RT_OWNERS, YESNO, type Exposure } from "../riskTruth.js";
 
 type Cell = ExcelJS.Cell;
@@ -311,6 +311,86 @@ function programmeFromSheet(ws: Sheet | null, qsCodes: Set<string>, start: strin
   return { start, days_per_week: daysPerWeek, hours_per_day: 8, tasks };
 }
 
+/** Whole working days from '55 days', '3d', '2 wks', '16 hrs' or a bare number (days), rounded up; null when it can't be read. */
+export function durationDays(text: unknown): number | null {
+  const m = /^(\d+(?:\.\d+)?)\s*(days?|d|wks?|weeks?|w|hrs?|hours?|h)?$/.exec(str(text).toLowerCase());
+  if (!m) return null;
+  let n = Number(m[1]);
+  const unit = m[2] ?? "d";
+  if (unit.startsWith("w")) n *= 5;
+  else if (unit.startsWith("h")) n /= 8;
+  return Math.ceil(n);
+}
+
+/** The header row of a sheet as lower-cased name -> column number. */
+function headerRow(ws: Sheet): Map<string, number> {
+  const head = new Map<string, number>();
+  ws.getRow(1).eachCell({ includeEmpty: false }, (c, n) => { const k = str(val(c)).toLowerCase(); if (k && !head.has(k)) head.set(k, n); });
+  return head;
+}
+
+/**
+ * The MS Project Import sheet (the table the estimator loads into MS Project: ID, Outline Level, WBS (the QS code), Task Name, Duration, Predecessors as
+ * task IDs). Used when the workbook has no usable Programme Export, so a programme given only as that table still builds the programme. A predecessor like
+ * "4FS" or "4SS+2d" is read as task 4: the platform's programme keeps finish-to-start. Rows with no usable code or name are left out.
+ */
+function programmeFromMsImport(ws: Sheet | null, qsCodes: Set<string>, start: string, daysPerWeek: number): Programme | null {
+  if (!ws) return null;
+  const head = headerRow(ws);
+  if (!["id", "task name", "duration"].every((k) => head.has(k))) return null;
+  const cell = (r: number, k: string) => (head.has(k) ? val(at(ws, r, head.get(k)!)) : null);
+  const rows: number[] = [];
+  for (let r = 2; r <= ws.rowCount; r++) if (str(cell(r, "id"))) rows.push(r);
+  const CODE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,19}$/;
+  const codeOf = new Map<string, string>();
+  for (const r of rows) { const code = str(cell(r, "wbs")); if (code && CODE.test(code)) codeOf.set(str(cell(r, "id")), code); }
+  const tasks: ProgrammeTask[] = [];
+  for (const r of rows) {
+    const id = str(cell(r, "id")), code = codeOf.get(id), name = str(cell(r, "task name"));
+    if (!code || !name) continue;
+    const days = durationDays(cell(r, "duration"));
+    const preds: string[] = [];
+    for (const tok of str(cell(r, "predecessors")).split(/[;,\s]+/)) {
+      const n = /^\d+/.exec(tok)?.[0];
+      if (n && codeOf.has(n) && !preds.includes(codeOf.get(n)!) && n !== id) preds.push(codeOf.get(n)!);
+    }
+    tasks.push({
+      id: `P-${String(tasks.length + 1).padStart(5, "0")}`, code, name: name.slice(0, 200), qs_code: qsCodes.has(code) ? code : "", override_days: days === null ? null : String(days),
+      predecessors: preds, hammock: str(cell(r, "category")).toUpperCase().startsWith("PRELIMINARIES"), basis: "From MS Project Import sheet", note: str(cell(r, "notes")).slice(0, 500),
+    });
+  }
+  return tasks.length ? { start, days_per_week: daysPerWeek, hours_per_day: 8, tasks } : null;
+}
+
+/**
+ * The Scope Coverage sheet: header row 1 (Scope ID, Group, Requirement, Detail, Source, Owner, Treatment, Cost refs, Register refs, Quote refs, Basis, Action),
+ * one row per requirement. A header may carry a hint in brackets ("Cost refs (QS codes / CA lines)"). A row the workbook typed badly (a group, owner or
+ * treatment that isn't one of ours) is kept with those three left blank, to be corrected on the Scope Register screen, rather than dropped; the platform
+ * decides nothing about treatment, it only checks it.
+ */
+function scopeFromSheet(ws: Sheet): { items: ScopeItem[]; kept: number; skipped: number } {
+  const head = headerRow(ws);
+  const want = { ref: "scope id", group: "group", title: "requirement", detail: "detail", source: "source", owner: "owner", treatment: "treatment", cost_refs: "cost refs", register_refs: "register refs", quote_refs: "quote refs", basis: "basis", action: "action" } as const;
+  const col = (name: string) => head.get(name) ?? [...head].find(([k]) => k.startsWith(name))?.[1];
+  if (!col(want.title)) return { items: [], kept: 0, skipped: 0 };
+  const items: ScopeItem[] = [];
+  let kept = 0, skipped = 0;
+  for (let r = 2; r <= ws.rowCount; r++) {
+    const v: Record<string, string> = {};
+    for (const [k, h] of Object.entries(want)) { const c = col(h); v[k] = c ? str(val(at(ws, r, c))) : ""; }
+    if (!v.title) continue;
+    const id = () => `C-wb${String(items.length + 1).padStart(4, "0")}`;
+    try {
+      items.push(buildScopeItem(id(), v, items));
+    } catch (e) {
+      if (!(e instanceof ScopeError)) throw e;
+      for (const f of ["group", "owner", "treatment"]) v[f] = "";
+      try { items.push(buildScopeItem(id(), v, items)); kept++; } catch (e2) { if (!(e2 instanceof ScopeError)) throw e2; skipped++; }
+    }
+  }
+  return { items, kept, skipped };
+}
+
 // ---- main ------------------------------------------------------------------------------------------------------------------------------
 export interface ImportedWorkbook extends TenderInputs {
   excelRows: number[];
@@ -392,6 +472,9 @@ export async function loadMasterWorkbook(bytes: Uint8Array): Promise<ImportedWor
     if (!code || (r > 306 && !(CODE_LIKE.test(str(code)) && str(val(a1(ws, `N${r}`)))))) continue;
     const c = (col: string) => val(a1(ws, `${col}${r}`));
     checkNumbers("Resource Build-Up", r, code, [["productivity", c("I")], ["duration override", c("L")], ["count", c("R")], ["quantity", c("S")], ["utilisation", c("U")], ["waste", c("V")], ["job rate", c("X")]]);
+    // a row with a code but no recognised calculation can't be priced; better to say which row than to import a job that can't be calculated
+    if (!(MODES as readonly string[]).includes(str(c("N"))))
+      throw new Error(`Resource Build-Up row ${r} (${str(code)}): the calculation is "${str(c("N")).slice(0, 40)}", which isn't one of: ${MODES.join(", ")}. Set it in the workbook and upload it again.`);
     rows.push({
       qsCode: String(code), mode: str(c("N")), resourceType: str(c("O")), resourceCode: str(c("P")), productivityRate: nOrNull(c("I")),
       durationOverrideHrs: nOrNull(c("L")), count: nOrNull(c("R")), manualQty: nOrNull(c("S")), utilisation: nOrNull(c("U")), waste: nOrNull(c("V")),
@@ -508,10 +591,25 @@ export async function loadMasterWorkbook(bytes: Uint8Array): Promise<ImportedWor
   const quotes = qr ? quoteRegister(qr) : [];
   if (!quotes.length) notes.push("No quotes were found in a Supplier Quote Register sheet: record them on the Scope Register screen.");
 
+  // scope coverage (a workbook without the sheet simply has no scope items yet; they are added on the Scope Register screen)
+  const scSheet = sheet("Scope Coverage");
+  const sc = scSheet ? scopeFromSheet(scSheet) : { items: [] as ScopeItem[], kept: 0, skipped: 0 };
+  if (scSheet) {
+    if (!sc.items.length && !sc.skipped) notes.push("The Scope Coverage sheet has no requirements that could be read (it needs a 'Requirement' column). Record them on the Scope Register screen.");
+    else notes.push(`${sc.items.length} scope requirement${sc.items.length === 1 ? "" : "s"} read from the Scope Coverage sheet${sc.kept ? `; ${sc.kept} had a group, owner or treatment that isn't one of ours, which was left blank for you to set` : ""}${sc.skipped ? `; ${sc.skipped} could not be read and were left out` : ""}.`);
+  }
+
+  // programme: the Programme Export sheet, or failing that the MS Project Import table
+  let programme = programmeFromSheet(sheet("Programme Export"), qsCodes, start, dpw);
+  if (!programme) {
+    programme = programmeFromMsImport(sheet("MS Project Import"), qsCodes, start, dpw);
+    if (programme) notes.push(`The programme was built from the MS Project Import sheet (${programme.tasks.length} tasks, finish-to-start links only). The durations there are used as set days; check them on the Programme screen.`);
+  }
+
   return {
     reference, meta: cover ? coverMeta(cover) : {}, library, qs, rows, excelRows, tool, recovery, commercial, riskFeed, overlays, overlap, weatherMeta,
-    weatherLinks, controls, register: [...coverItems, ...rtTab.risks], quotes, scope: [], notes, riskTruth: rtTab.exposures, managementReserve: reserveFromCommercial(commercial, ci),
-    programme: programmeFromSheet(sheet("Programme Export"), qsCodes, start, dpw), workbook: wb,
+    weatherLinks, controls, register: [...coverItems, ...rtTab.risks], quotes, scope: sc.items, notes, riskTruth: rtTab.exposures, managementReserve: reserveFromCommercial(commercial, ci),
+    programme, workbook: wb,
   };
 }
 
