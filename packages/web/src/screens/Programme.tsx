@@ -5,6 +5,7 @@ import type { ProgrammeTaskResult } from "@blackline/tender/core";
 import { gridTheme, monoCell } from "../grid.js";
 import { longDate, money } from "../lib/fmt.js";
 import { newTask, setConfigField, setTaskFieldEdit, startFromEstimate, type ProgrammeConfig } from "../lib/programme.js";
+import { inStep } from "../lib/programmeSync.js";
 import { hrefJob } from "../route.js";
 import type { Workspace } from "../workspace.js";
 import { PackageBar } from "./PackageBar.js";
@@ -158,6 +159,23 @@ export function Programme({ ws, jobId }: { ws: Workspace; jobId: string }) {
         <a className="btn" href={hrefJob(jobId, "gantt")} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open the Gantt</a>
       </PackageBar>
       {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
+      {model.gantt?.progLink && model.syncStatus && !inStep(model.syncStatus) && (() => {
+        const s = model.syncStatus!;
+        const ganttPkg = model.ganttPackageId;
+        const both = editable && !!ganttPkg && ws.canEdit(ganttPkg);
+        const parts = [
+          s.toGantt ? `${s.toGantt} task${s.toGantt === 1 ? "" : "s"} changed here ${s.toGantt === 1 ? "isn't" : "aren't"} in the Gantt yet` : "",
+          s.toProgramme ? `${s.toProgramme} task${s.toProgramme === 1 ? "" : "s"} changed in the Gantt ${s.toProgramme === 1 ? "isn't" : "aren't"} here yet` : "",
+          s.created ? `${s.created} new task${s.created === 1 ? "" : "s"} ${s.created === 1 ? "isn't" : "aren't"} in the Gantt` : "",
+          s.removed ? `${s.removed} Gantt task${s.removed === 1 ? "" : "s"} still ${s.removed === 1 ? "has" : "have"} no task here` : "",
+        ].filter(Boolean);
+        return (
+          <div className="notice warn wrap">
+            <span>{parts.join("; ")}. {both ? "" : "Check out both the Programme and the Gantt and changes carry across by themselves."}</span>
+            <button className="btn primary" disabled={!both} onClick={ws.syncNow}>Carry across now</button>
+          </div>
+        );
+      })()}
       <div className="prog-strip">
         <label>Start <input className="find" style={{ width: 110 }} value={startText} disabled={!editable} aria-label="Programme start" placeholder="2026-10-05"
           onChange={(e) => setStartText(e.target.value)} onBlur={() => startText !== config.start && changeConfig("start", startText)} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} /></label>
@@ -165,6 +183,7 @@ export function Programme({ ws, jobId }: { ws: Workspace; jobId: string }) {
         <label>Hours a day <input className="find" style={{ width: 44 }} defaultValue={config.hours_per_day} key={`h${config.hours_per_day}`} disabled={!editable} aria-label="Hours a day" onBlur={(e) => e.target.value !== String(config.hours_per_day) && changeConfig("hours_per_day", e.target.value)} /></label>
         <span className="sep" />
         <span><strong>{result.duration}</strong> working days</span>
+        {model.gantt?.progLink && inStep(model.syncStatus) && <span title="A change to a linked task here or in the Gantt carries to the other">Linked to the Gantt</span>}
         <span>Finish <strong>{longDate(result.finish)}</strong></span>
       </div>
       {(result.problems.length > 0 || result.missing.length > 0) && (

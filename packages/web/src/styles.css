@@ -272,3 +272,30 @@ button.gantt-th:hover { background: var(--selected); }
 .cal-body input:disabled { background: var(--calc); }
 .cal-ex .new td { background: var(--panel); }
 @media (max-width: 1000px) { .cal-body { grid-template-columns: 1fr; } }
+
+/* gantt alignment: the timescale picture must not leave a gap under it, and both panes reserve the same scrollbar space */
+.gantt-head svg { display: block; }
+.gantt-head { height: 40px; overflow: hidden; }
+.gantt-left { overflow-x: scroll; overflow-y: hidden; }
+.gantt-table, .gantt-scroll { scrollbar-gutter: stable; }
+
+/* resizable column headings */
+.gantt-thw { position: relative; flex: none; box-sizing: border-box; display: flex; }
+.gantt-thw > .gantt-th { width: 100%; border-right: 1px solid var(--line-strong); }
+.col-resize { position: absolute; right: -3px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 4; touch-action: none; }
+.col-resize:hover { background: rgba(0, 0, 0, 0.18); }
+
+/* format bars panel */
+.seg { display: flex; margin-bottom: 8px; }
+.seg button { flex: 1; border: 1px solid var(--line-strong); background: var(--paper); padding: 4px 8px; cursor: pointer; margin-right: -1px; font: inherit; }
+.seg button.on { background: var(--black); color: var(--on-black); border-color: var(--black); }
+.fmt-row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
+.fmt-row select { height: 24px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); min-width: 0; }
+.fmt-label { color: var(--muted); font-size: 12px; }
+.fmt-colour { margin: 8px 0; }
+.swatches { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; align-items: center; }
+.swatch { width: 20px; height: 20px; border: 1px solid var(--line-strong); padding: 0; cursor: pointer; }
+.swatch.on { outline: 2px solid var(--black); outline-offset: 1px; }
+.swatch:disabled { opacity: 0.5; cursor: default; }
+.hex { width: 78px; height: 22px; border: 1px solid var(--line-strong); padding: 0 6px; font-family: var(--mono); background: var(--paper); color: var(--ink); }
+.fmt-preview { display: block; border: 1px solid var(--line-strong); background: #fff; margin: 8px 0; }

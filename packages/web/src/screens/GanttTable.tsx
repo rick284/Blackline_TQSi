@@ -12,6 +12,10 @@ interface Props {
   sort: SortSpec | null;
   readOnly: boolean;
   onSort: (key: string) => void;
+  /** A column dragged to a new width (px) */
+  onResize: (key: string, width: number) => void;
+  /** Double-click on a column's edge: back to its usual width */
+  onResetWidth: (key: string) => void;
   onSelect: (uid: number, mode: "one" | "toggle" | "range") => void;
   onToggle: (uid: number) => void;
   onEdit: (e: { uid: number; col: string } | null) => void;
@@ -28,9 +32,21 @@ export const GanttTable = forwardRef<HTMLDivElement, Props>(function GanttTable(
     <div className="gantt-table" ref={ref} style={{ width: W }} onWheel={(e) => p.onWheel(e.deltaY)}>
       <div className="gantt-thead" style={{ height: TIER_H * 2, width: W }}>
         {p.columns.map((c) => (
-          <button key={c.key} className="gantt-th" style={{ width: c.width, justifyContent: c.align === "right" ? "flex-end" : c.align === "center" ? "center" : "flex-start" }} onClick={() => p.onSort(c.key)} title={`Sort by ${c.title}`}>
-            {c.title}{p.sort?.key === c.key ? (p.sort.dir === "asc" ? " ▲" : " ▼") : ""}
-          </button>
+          <div key={c.key} className="gantt-thw" style={{ width: c.width }}>
+            <button className="gantt-th" style={{ justifyContent: c.align === "right" ? "flex-end" : c.align === "center" ? "center" : "flex-start" }} onClick={() => p.onSort(c.key)} title={`Sort by ${c.title}`}>
+              {c.title}{p.sort?.key === c.key ? (p.sort.dir === "asc" ? " ▲" : " ▼") : ""}
+            </button>
+            <span className="col-resize" role="separator" aria-orientation="vertical" aria-label={`Resize ${c.title}`} title="Drag to change the width; double-click for the usual width"
+              onPointerDown={(e) => {
+                e.preventDefault(); e.stopPropagation();
+                const x0 = e.clientX, w0 = c.width;
+                const move = (ev: PointerEvent) => p.onResize(c.key, w0 + ev.clientX - x0);
+                const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+                window.addEventListener("pointermove", move);
+                window.addEventListener("pointerup", up);
+              }}
+              onDoubleClick={(e) => { e.stopPropagation(); p.onResetWidth(c.key); }} onClick={(e) => e.stopPropagation()} />
+          </div>
         ))}
       </div>
       <div style={{ width: W }}>

@@ -301,33 +301,3 @@ export function parseLinks(text: string, uidOf: (id: number) => number | undefin
   }
   return { ok: true, links };
 }
-
-// ---- from the tender programme -------------------------------------------------------------------------------------------------------
-/** Gantt rows from the tender programme: a summary task for each section, a task for each programme task (durations in days), links kept as
- *  finish-to-start, preliminaries running the whole job. */
-export function fromProgramme(tasks: { code: string; name: string; section: string; duration: number; predecessors: string[]; hammock: boolean }[], minutesPerDay: number): Row[] {
-  const rows: Row[] = [];
-  const uidOfCode = new Map<string, number>();
-  let uid = 1;
-  const sections: string[] = [];
-  for (const t of tasks) if (!sections.includes(t.section)) sections.push(t.section);
-  // pass 1: assign uids so a link can point forward in the list
-  const plan: { section: string; uid: number; t: (typeof tasks)[number] }[] = [];
-  const sectionUid = new Map<string, number>();
-  for (const s of sections) {
-    sectionUid.set(s, uid++);
-    for (const t of tasks.filter((x) => x.section === s)) { uidOfCode.set(t.code, uid); plan.push({ section: s, uid: uid++, t }); }
-  }
-  for (const s of sections) {
-    const su = sectionUid.get(s)!;
-    rows.push({ task: G.newTask(su, s, 1), seq: rows.length * 1000 + 1000 });
-    for (const p of plan.filter((x) => x.section === s)) {
-      const task = G.newTask(p.uid, `${p.t.code}  ${p.t.name}`.slice(0, 200), 2);
-      task.durationMin = p.t.duration * minutesPerDay;
-      task.milestone = p.t.duration === 0 && !p.t.hammock; // a programme task with no days is a milestone, as in MS Project
-      task.links = p.t.predecessors.map((c) => uidOfCode.get(c)).filter((u): u is number => u !== undefined && u !== p.uid).map((u) => ({ uid: u, type: "FS" as const, lagMin: 0 }));
-      rows.push({ task, seq: rows.length * 1000 + 1000 });
-    }
-  }
-  return rows;
-}

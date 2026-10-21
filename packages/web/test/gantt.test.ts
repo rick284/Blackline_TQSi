@@ -163,22 +163,3 @@ describe("what people type", () => {
     expect(X.parseLinks("1, 1", (i) => i, 9)).toMatchObject({ ok: false, error: expect.stringContaining("twice") });
   });
 });
-
-describe("building the Gantt from the tender programme", () => {
-  it("makes a summary per section, a task per programme task in days, and finish-to-start links by code", () => {
-    const r = X.fromProgramme([
-      { code: "PG01", name: "Preliminaries", section: "Prelims", duration: 55, predecessors: [], hammock: true },
-      { code: "EW01", name: "Strip", section: "Earthworks", duration: 3, predecessors: [], hammock: false },
-      { code: "EW02", name: "Fill", section: "Earthworks", duration: 5, predecessors: ["EW01"], hammock: false },
-      { code: "PV01", name: "Basecourse", section: "Pavements", duration: 2, predecessors: ["EW02", "NOPE"], hammock: false },
-    ], D);
-    expect(names(r)).toEqual(["Prelims", "-PG01  Preliminaries", "Earthworks", "-EW01  Strip", "-EW02  Fill", "Pavements", "-PV01  Basecourse"]);
-    const s = G.schedule(proj(r));
-    const by = (n: string) => s.tasks.find((t) => r.find((x) => x.task.uid === t.uid)!.task.name.startsWith(n))!;
-    expect(by("PG01").durationMin).toBe(55 * D);
-    expect(by("EW02").start).toBe("2026-10-08T08:00:00");
-    expect(by("PV01").start).toBe("2026-10-15T08:00:00");
-    expect(by("Earthworks").summary).toBe(true);
-    expect(s.problems).toEqual([]);
-  });
-});

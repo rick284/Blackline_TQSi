@@ -15,7 +15,7 @@ const plain = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 /** The package a project is stored as. */
 export function ganttSeedPackage(p: GProject): SeedPackage {
   const records: Record<string, RecordData> = {};
-  records["gantt:config"] = { kind: "ganttConfig", body: { name: p.name, start: p.start, statusDate: p.statusDate, calendarUid: p.calendarUid, minutesPerDay: p.minutesPerDay, minutesPerWeek: p.minutesPerWeek } };
+  records["gantt:config"] = { kind: "ganttConfig", body: { name: p.name, start: p.start, statusDate: p.statusDate, calendarUid: p.calendarUid, minutesPerDay: p.minutesPerDay, minutesPerWeek: p.minutesPerWeek, ...(p.barStyles ? { barStyles: p.barStyles } : {}), ...(p.progLink ? { progLink: true } : {}) } };
   for (const c of p.calendars) records[`gcal:${c.uid}`] = { kind: "ganttCalendar", body: plain(c) };
   p.tasks.forEach((t, i) => { records[`gtask:${t.uid}`] = { kind: "ganttTask", seq: (i + 1) * 1000, body: plain(t) }; });
   for (const r of p.resources) records[`gres:${r.uid}`] = { kind: "ganttResource", body: plain(r) };
@@ -44,6 +44,8 @@ export function assembleGantt(records: Iterable<{ id: string; data: RecordData }
   return {
     name: String(config.name ?? "Project"), start: String(config.start), statusDate: config.statusDate ?? null, calendarUid: Number(config.calendarUid ?? 1),
     minutesPerDay: Number(config.minutesPerDay ?? 480), minutesPerWeek: Number(config.minutesPerWeek ?? 2400),
+    ...(config.barStyles ? { barStyles: config.barStyles } : {}),
+    ...(config.progLink ? { progLink: true } : {}),
     tasks: tasks.map((t) => t.body), calendars: calendars.sort((a, b) => a.uid - b.uid), resources: resources.sort((a, b) => a.uid - b.uid), assignments: assignments.sort((a, b) => a.uid - b.uid),
   };
 }

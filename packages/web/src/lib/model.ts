@@ -5,6 +5,7 @@
 import { D, ZERO, type Dec } from "@blackline/engine";
 import { assembleInputs, computeTenderEstimate, gantt as G, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
 import type { ServerRecord } from "./draft.js";
+import { pInfosOf, reconcile, statusOf, type PInfo, type SyncStatus } from "./programmeSync.js";
 
 export interface QsRow {
   kind: "section" | "item";
@@ -81,6 +82,9 @@ export interface Model {
   ganttPackageId: string;
   /** Every record id the Gantt package holds, so a replacement can clear what it doesn't keep */
   ganttRecordIds: string[];
+  /** The Programme as the Gantt sees it (null until a programme is started), and, when the Gantt is linked to it, what is not yet carried across */
+  programmeInfos: PInfo[] | null;
+  syncStatus: SyncStatus | null;
 }
 
 const BLOCKING = new Set(["RESOURCE CODE", "RATE MISSING", "OPERATOR DOUBLE-COUNT", "FUEL DOUBLE-COUNT"]);
@@ -107,6 +111,7 @@ export function buildModel(records: ServerRecord[]): Model {
     buildups.set(src.qsCode, [...(buildups.get(src.qsCode) ?? []), row]);
   });
 
+  const pInfos = pInfosOf(estimate.programme);
   const qsRows: QsRow[] = [];
   const sections: string[] = [];
   for (const l of estimate.qs.lines) if (!sections.includes(l.section)) sections.push(l.section);
@@ -138,7 +143,8 @@ export function buildModel(records: ServerRecord[]): Model {
   return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost, labourBuilds: inputs.labourBuilds ?? {}, register: inputs.register ?? [], quotes: inputs.quotes ?? [],
     commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve, programme: inputs.programme ?? null,
     gantt: ganttProject, ganttRows, ganttSchedule: ganttProject ? G.schedule(ganttProject) : null, ganttPackageId: pkgOf.get("gantt:config") ?? "",
-    ganttRecordIds: records.filter((r) => /^(gantt|gtask|gcal|gres|gasg):/.test(r.id)).map((r) => r.id) };
+    ganttRecordIds: records.filter((r) => /^(gantt|gtask|gcal|gres|gasg):/.test(r.id)).map((r) => r.id),
+    programmeInfos: pInfos, syncStatus: ganttProject?.progLink && pInfos ? statusOf(reconcile(pInfos, ganttRows, ganttProject.minutesPerDay)) : null };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);

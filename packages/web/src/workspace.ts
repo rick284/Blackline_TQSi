@@ -11,6 +11,7 @@ import { addRecord, changeSetOf, countChanges, deleteRecord, discardPackage, edi
 import type { Parked } from "./lib/parked.js";
 import { kv } from "./lib/kv.js";
 import * as history from "./lib/history.js";
+import { syncAcross } from "./lib/syncDrafts.js";
 import { buildModel, nextUid } from "./lib/model.js";
 import { flushQueue, type SendOutcome } from "./lib/queue.js";
 import type { Session } from "./session.js";
@@ -59,14 +60,26 @@ export function useWorkspace(jobId: string, session: Session) {
   // history is cleared then (an undo must never bring back drafts of a package that is no longer yours). Kept in memory only.
   const hist = useRef(history.empty<Drafts>());
   const [, bumpHistory] = useState(0);
-  const commit = useCallback((next: Drafts) => {
+  const canEditRef = useRef<(id: string) => boolean>(() => false);
+  const recordsRef = useRef<ServerRecord[] | null>(null);
+  /** The tender Programme and the Gantt carry changes to each other: when the Gantt is linked and both packages are held, what an edit changes on one
+   *  side is written to the other in the same step, so one undo takes back both. */
+  const carry = useCallback((next: Drafts): { drafts: Drafts; note: Notice | null } => {
+    const recs = recordsRef.current;
+    const gantt = packagesRef.current.find((p) => p.kind === "gantt")?.id, programme = packagesRef.current.find((p) => p.kind === "programme")?.id;
+    if (!recs || !gantt || !programme || !canEditRef.current(gantt) || !canEditRef.current(programme)) return { drafts: next, note: null };
+    const s = syncAcross(recs, next, { gantt, programme });
+    return { drafts: s.drafts, note: s.notes.length ? { kind: s.notes.length > 1 || s.notes[0]!.includes("kept") ? "warn" : "info", text: s.notes.join(" ") } : null };
+  }, []);
+  const commit = useCallback((next: Drafts, opts: { carry?: boolean } = {}) => {
     const before = savedRef.current.drafts;
-    if (JSON.stringify(before) === JSON.stringify(next)) return;
+    const c = opts.carry === false ? { drafts: next, note: null } : carry(next);
+    if (JSON.stringify(before) === JSON.stringify(c.drafts)) return;
     hist.current = history.record(hist.current, before);
     bumpHistory((n) => n + 1);
-    setNotice(null); // a warning about an earlier, refused value no longer applies once a change goes through
-    persist({ ...savedRef.current, drafts: next });
-  }, [persist]);
+    setNotice(c.note); // a warning about an earlier, refused value no longer applies once a change goes through
+    persist({ ...savedRef.current, drafts: c.drafts });
+  }, [persist, carry]);
   const forgetHistory = useCallback(() => { hist.current = history.empty<Drafts>(); bumpHistory((n) => n + 1); }, []);
   const undo = useCallback(() => {
     const r = history.undo(hist.current, savedRef.current.drafts);
@@ -130,6 +143,8 @@ export function useWorkspace(jobId: string, session: Session) {
   /** Whether the estimator holds this package: the server says the lock is theirs. */
   const isMine = useCallback((id: string) => pkg(id)?.lock?.holder === session.userId, [pkg, session.userId]);
   const canEdit = useCallback((id: string) => isMine(id) && session.role !== "viewer", [isMine, session.role]);
+  canEditRef.current = canEdit;
+  recordsRef.current = records;
 
   const run = useCallback(async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -318,6 +333,24 @@ export function useWorkspace(jobId: string, session: Session) {
     commit(items.reduce((d, i) => setRecord(d, records, packageId, i.recordId, i.data), savedRef.current.drafts));
   }, [records, canEdit, commit]);
 
+  /** Write records of more than one package as one step (the Gantt and the Programme together, say). Does nothing unless every package involved is yours. */
+  const batchMulti = useCallback((items: { packageId: string; recordId: string; data: RecordData | null }[]) => {
+    if (!records || items.length === 0 || !items.every((i) => canEdit(i.packageId))) return false;
+    commit(items.reduce((d, i) => setRecord(d, records, i.packageId, i.recordId, i.data), savedRef.current.drafts));
+    return true;
+  }, [records, canEdit, commit]);
+
+  /** Carry across whatever the Programme and the Gantt owe each other now, even if nothing else was edited (after checking out the second package). */
+  const syncNow = useCallback(() => {
+    const before = savedRef.current.drafts;
+    const c = carry(before);
+    if (c.drafts === before) { setNotice({ kind: "info", text: "The Programme and the Gantt are already in step, or one of them is not checked out." }); return; }
+    hist.current = history.record(hist.current, before);
+    bumpHistory((n) => n + 1);
+    setNotice(c.note);
+    persist({ ...savedRef.current, drafts: c.drafts });
+  }, [carry, persist]);
+
   /** Ask in the page bar; `go` runs only if the person says yes. */
   const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
 
@@ -328,7 +361,7 @@ export function useWorkspace(jobId: string, session: Session) {
     queuedCount: waiting,
     undo, redo, canUndo: hist.current.past.length > 0, canRedo: hist.current.future.length > 0,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
-    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, removeMany, batch, confirm, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
+    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, removeMany, batch, batchMulti, syncNow, confirm, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
   };
 }
 

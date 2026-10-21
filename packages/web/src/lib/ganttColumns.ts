@@ -16,6 +16,8 @@ export interface Ctx {
   wc: G.WorkCalendar;
   /** Now, as minutes, for "late" */
   today: number;
+  /** Programme task id -> its code, for the Programme Task column */
+  progCodes?: Map<string, string>;
 }
 
 export interface ColDef {
@@ -63,6 +65,7 @@ export const COLUMNS: ColDef[] = [
   { key: "startVariance", title: "Start Variance", width: 96, align: "right", text: (r, c) => (base(r) ? dur(c.wc.between(G.toMin(base(r)!.start), r.s.startMin), c) : ""), sort: (r, c) => (base(r) ? c.wc.between(G.toMin(base(r)!.start), r.s.startMin) : null) },
   { key: "finishVariance", title: "Finish Variance", width: 96, align: "right", text: (r, c) => (base(r) ? dur(c.wc.between(G.toMin(base(r)!.finish), r.s.finishMin), c) : ""), sort: (r, c) => (base(r) ? c.wc.between(G.toMin(base(r)!.finish), r.s.finishMin) : null) },
   { key: "calendar", title: "Task Calendar", width: 120, text: (r, c) => c.project.calendars.find((x) => x.uid === r.task.calendarUid)?.name ?? "", sort: (r, c) => c.project.calendars.find((x) => x.uid === r.task.calendarUid)?.name.toLowerCase() ?? null },
+  { key: "progCode", title: "Programme Task", width: 110, text: (r, c) => (r.task.progId ? c.progCodes?.get(r.task.progId) ?? "" : ""), sort: (r, c) => (r.task.progId ? c.progCodes?.get(r.task.progId)?.toLowerCase() ?? null : null) },
   { key: "active", title: "Active", width: 60, align: "center", text: (r) => (r.task.active ? "Yes" : "No"), sort: (r) => (r.task.active ? 0 : 1) },
   { key: "notes", title: "Notes", width: 200, text: (r) => r.task.notes.replace(/\s+/g, " ").slice(0, 120), sort: (r) => r.task.notes.toLowerCase() || null },
 ];

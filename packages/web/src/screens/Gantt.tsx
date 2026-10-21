@@ -2,21 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gantt as G, type RecordData } from "@blackline/tender/core";
 import { api, ApiError } from "../api.js";
 import * as X from "../lib/gantt.js";
+import * as PS from "../lib/programmeSync.js";
+import { resetTaskBar, setStyle, setTaskBar, type BarCategory, type BarFormat } from "../lib/ganttBars.js";
 import { COLUMNS, COLUMN_BY_KEY, FILTERS, arrange, canEditCell, isFiltering, NO_FILTER, type Ctx, type FilterKind } from "../lib/ganttColumns.js";
 import { assign, parseAssignments, taskTotals } from "../lib/ganttResources.js";
-import { MAX_LEFT, MIN_LEFT, nextSort, parseSettings, settingsKey, type GanttSettings, type View } from "../lib/ganttSettings.js";
+import { MAX_LEFT, MIN_LEFT, clampWidth, nextSort, parseSettings, settingsKey, type GanttSettings, type View } from "../lib/ganttSettings.js";
 import { ZOOMS, makeScale, zoomIn, zoomOut, type Zoom } from "../lib/ganttView.js";
 import { useSession } from "../session.js";
 import type { Workspace } from "../workspace.js";
 import { GanttCalendars } from "./GanttCalendars.js";
 import { GanttChart, type ChartRow, type End } from "./GanttChart.js";
 import { GanttColumns } from "./GanttColumns.js";
+import { GanttFormat } from "./GanttFormat.js";
 import { GanttInfo } from "./GanttInfo.js";
 import { GanttResources } from "./GanttResources.js";
 import { GanttTable, tableWidth } from "./GanttTable.js";
 import { PackageBar } from "./PackageBar.js";
 
-type Tab = "File" | "Task" | "View" | "Project";
+type Tab = "File" | "Task" | "View" | "Format" | "Project";
 const ZOOM_NAMES: Record<Zoom, string> = { quarters: "Quarters", months: "Months", weeks: "Weeks", days: "Days" };
 const VIEW_NAMES: Record<View, string> = { chart: "Gantt Chart", resources: "Resource Sheet", calendars: "Calendars" };
 
@@ -55,7 +58,8 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [anchor, setAnchor] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
-  const [panel, setPanel] = useState<"info" | "columns" | null>("info");
+  const [panel, setPanel] = useState<"info" | "columns" | "format" | null>("info");
+  const [fmtMode, setFmtMode] = useState<"selected" | "styles">("selected");
   const [editing, setEditing] = useState<{ uid: number; col: string } | null>(null);
   const [tab, setTab] = useState<Tab>("Task");
   const tableRef = useRef<HTMLDivElement>(null);
@@ -68,8 +72,9 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
   const todayMin = G.toMin(localNow());
   const joined: ChartRow[] = useMemo(() => (sched ? rows.map((r) => ({ task: r.task, s: sched.byUid.get(r.task.uid)! })).filter((r) => r.s) : []), [rows, sched]);
   const totals = useMemo(() => (project && sched ? taskTotals(project, sched) : new Map()), [project, sched]);
-  const ctx: Ctx | null = project && sched ? { project, sched, totals, wc, today: todayMin } : null;
-  const columns = useMemo(() => settings.columns.map((k) => COLUMN_BY_KEY.get(k)!).filter(Boolean), [settings.columns]);
+  const progCodes = useMemo(() => new Map((model.programme?.tasks ?? []).map((t) => [t.id, t.code])), [model.programme]);
+  const ctx: Ctx | null = project && sched ? { project, sched, totals, wc, today: todayMin, progCodes } : null;
+  const columns = useMemo(() => settings.columns.map((k) => COLUMN_BY_KEY.get(k)!).filter(Boolean).map((c) => (settings.widths[c.key] ? { ...c, width: settings.widths[c.key]! } : c)), [settings.columns, settings.widths]);
   const arranged = useMemo(() => (ctx ? arrange(joined, { filter, sort, collapsed }, ctx) : { rows: [], filtered: false, sorted: false }), [joined, filter, sort, collapsed, project, sched, totals]); // eslint-disable-line react-hooks/exhaustive-deps
   const vis = arranged.rows;
   const idOf = useCallback((uid: number) => sched?.byUid.get(uid)?.id, [sched]);
@@ -97,10 +102,10 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
   const say = (kind: "info" | "warn", text: string) => ws.notify({ kind, text });
 
   /** Write the rows that differ from what is stored: one step for undo. Refuses a change that would make a loop of links. */
-  const commit = (next: X.Row[]): boolean => {
+  const commit = (next: X.Row[], extra: { packageId: string; recordId: string; data: RecordData | null }[] = []): boolean => {
     if (!project || !editable) return false;
     const d = X.diff(rows, next);
-    if (!d.upserts.length && !d.deletes.length) return true;
+    if (!d.upserts.length && !d.deletes.length && !extra.length) return true;
     const after = G.schedule({ ...project, tasks: next.map((r) => r.task) });
     if (after.problems.some((p) => p.includes("loop")) && !sched!.problems.some((p) => p.includes("loop"))) { say("warn", "That would make a loop of links, so it wasn't done."); return false; }
     const items: { recordId: string; data: RecordData | null }[] = [
@@ -108,7 +113,7 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
       ...d.deletes.map((uid) => ({ recordId: `gtask:${uid}`, data: null })),
       ...project.assignments.filter((a) => d.deletes.includes(a.taskUid)).map((a) => ({ recordId: `gasg:${a.uid}`, data: null })),
     ];
-    ws.batch(pkgId, items);
+    if (extra.length) ws.batchMulti([...items.map((i) => ({ packageId: pkgId, ...i })), ...extra]); else ws.batch(pkgId, items);
     return true;
   };
   const updateTask = (uid: number, fn: (t: G.GTask) => G.GTask | string) => {
@@ -148,12 +153,33 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
     const r = X.insert(rows, selUids, kind);
     if (commit(r.rows)) { setSelected(new Set([r.uid])); setAnchor(r.uid); setEditing({ uid: r.uid, col: "name" }); }
   };
+  const progPkg = ws.packages.find((p) => p.kind === "programme")?.id ?? "";
+  const progTasks = (model.programme?.tasks ?? []) as unknown as PS.ProgTask[];
   const doDelete = () => {
     if (!selUids.length) return;
     const r = X.remove(rows, selUids);
-    const go = () => { commit(r.rows); setSelected(new Set()); };
-    if (r.removed.length > selUids.length) ws.confirm(`Delete ${selUids.length === 1 ? "this summary task" : "these tasks"} and the ${r.removed.length - selUids.length} task${r.removed.length - selUids.length === 1 ? "" : "s"} inside? You can undo this.`, "Delete", go);
+    // a task that is also in the Programme comes out of both, so the two stay in step
+    const gone = project?.progLink ? PS.removeFromProgramme(rows, r.removed, progTasks) : { deletes: [] as string[], rewrites: new Map<string, string[]>() };
+    if (gone.deletes.length && !ws.canEdit(progPkg)) { say("warn", `${gone.deletes.length === 1 ? "That task is" : "Some of those tasks are"} also in the Programme. Check the Programme out first, so ${gone.deletes.length === 1 ? "it comes" : "they come"} out of both.`); return; }
+    const extra: { packageId: string; recordId: string; data: RecordData | null }[] = [
+      ...gone.deletes.map((id) => ({ packageId: progPkg, recordId: `task:${id}`, data: null })),
+      ...[...gone.rewrites].map(([id, preds]) => { const cur = ws.record(`task:${id}`)!; return { packageId: progPkg, recordId: `task:${id}`, data: { ...cur, body: { ...(cur.body as object), predecessors: preds } } as RecordData }; }),
+    ];
+    const go = () => { commit(r.rows, extra); setSelected(new Set()); };
+    const inside = r.removed.length - selUids.length;
+    const also = gone.deletes.length ? " It is also in the Programme, and comes out of there too." : "";
+    if (inside > 0 || gone.deletes.length) ws.confirm(`Delete ${inside > 0 ? `${selUids.length === 1 ? "this summary task" : "these tasks"} and the ${inside} task${inside === 1 ? "" : "s"} inside` : selUids.length === 1 ? "this task" : "these tasks"}?${also} You can undo this.`, "Delete", go);
     else go();
+  };
+  /** Put the selected Gantt-only tasks into the Programme as control tasks, linked from now on. */
+  const doAddToProgramme = () => {
+    if (!project?.progLink) { say("info", "Link the Gantt to the Programme first (File > Build from the Programme)."); return; }
+    if (!ws.canEdit(progPkg)) { say("warn", "Check the Programme out first, so the tasks can go into both."); return; }
+    const r = PS.addToProgramme(rows, selUids, progTasks, mpd);
+    if (!r.tasks.length) { say("info", r.skipped[0] ?? "Select the tasks to add."); return; }
+    const seq0 = ws.nextSeq("task");
+    const extra = r.tasks.map((t, i) => ({ packageId: progPkg, recordId: `task:${t.id}`, data: { kind: "task", seq: seq0 + i, body: t } as RecordData }));
+    if (commit(r.rows, extra)) say("info", `${r.tasks.length} task${r.tasks.length === 1 ? "" : "s"} added to the Programme. A Programme task counts towards the tender programme's length${r.skipped.length ? `. ${r.skipped.length} skipped: ${r.skipped[0]}` : "."}`);
   };
   const doLink = () => { const r = X.linkTasks(rows, selUids); if (r.added) commit(r.rows); if (r.skipped.length) say("warn", r.skipped[0]!); else if (!r.added) say("info", "Select two or more tasks to link."); };
   const doMove = (dir: -1 | 1) => { if (arranged.sorted) { say("info", "The table is sorted, so the order can't be changed. Choose Sort by ID first."); return; } commit(X.move(rows, selUids, dir)); };
@@ -238,19 +264,19 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
     } catch (e) { say("warn", e instanceof Error ? e.message : "That file could not be read."); }
   };
   const fromProgramme = () => {
-    const prog = model.estimate.programme;
-    if (!project || "setUp" in prog) { say("info", "The Programme has no tasks yet. Start it on the Programme window first."); return; }
+    const infos = model.programmeInfos;
+    if (!project || !infos) { say("info", "The Programme has no tasks yet. Start it on the Programme window first."); return; }
     const next = G.newProject(model.programme?.start ? `${model.programme.start}T08:00:00` : project.start, project.name);
-    next.calendars = project.calendars; next.calendarUid = project.calendarUid; next.resources = project.resources;
-    const r = X.fromProgramme(prog.tasks.map((t) => ({ code: t.code, name: t.name, section: t.section, duration: t.duration, predecessors: t.predecessors, hammock: t.hammock })), mpd);
-    next.tasks = r.map((x) => x.task);
+    next.calendars = project.calendars; next.calendarUid = project.calendarUid; next.resources = project.resources; next.barStyles = project.barStyles;
+    next.progLink = true;
+    next.tasks = PS.fromProgramme(infos, mpd).map((x) => x.task);
     const seed = G.ganttSeedPackage(next).records;
     const items: { recordId: string; data: RecordData | null }[] = [
       ...model.ganttRecordIds.filter((id) => !(id in seed) && !id.startsWith("gcal:") && !id.startsWith("gres:")).map((id) => ({ recordId: id, data: null })),
       ...Object.entries(seed).map(([recordId, data]) => ({ recordId, data })),
     ];
     const go = () => { ws.batch(pkgId, items); setSelected(new Set()); };
-    if (rows.length) ws.confirm(`Replace the ${rows.length} task${rows.length === 1 ? "" : "s"} in the Gantt with the ${prog.tasks.length} from the Programme? You can undo this.`, "Replace", go); else go();
+    if (rows.length) ws.confirm(`Replace the ${rows.length} task${rows.length === 1 ? "" : "s"} in the Gantt with the ${infos.length} from the Programme, linked so a change on either side carries to the other? You can undo this.`, "Replace", go); else go();
   };
   const setConfig = (field: "start" | "statusDate", text: string) => {
     const d = field === "statusDate" && !text.trim() ? null : X.parseDate(text, field === "start" ? "08:00:00" : "17:00:00");
@@ -317,7 +343,7 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
       <PackageBar ws={ws} pkgId={pkgId} />
       {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
       <div className="ribbon" role="tablist" aria-label="Ribbon">
-        {(["File", "Task", "View", "Project"] as Tab[]).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={`rtab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>{t}</button>)}
+        {(["File", "Task", "View", "Format", "Project"] as Tab[]).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={`rtab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       <div className="ribbon-body">
         {tab === "File" && (
@@ -343,7 +369,10 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
               {b(one && !one.task.active ? "Activate" : "Inactivate", () => commit(X.setActive(rows, selUids, !(one && !one.task.active))), { disabled: ro || !selUids.length, title: "Take the task out of the schedule (it stays in the project)" })}
             </div><div className="rcap">Schedule</div></div>
             <div className="rgroup"><div className="rrow">{[0, 25, 50, 75, 100].map(progress)}</div><div className="rcap">Mark complete</div></div>
-            <div className="rgroup"><div className="rrow">{b("Information", () => setPanel(panel === "info" ? null : "info"), { disabled: false, on: panel === "info", title: "Task Information" })}</div><div className="rcap">Properties</div></div>
+            <div className="rgroup"><div className="rrow">
+              {b("Information", () => setPanel(panel === "info" ? null : "info"), { disabled: false, on: panel === "info", title: "Task Information" })}
+              {b("Add to Programme", doAddToProgramme, { disabled: ro || !selUids.length || !project.progLink, title: project.progLink ? "Put the selected tasks into the tender Programme as control tasks, linked from then on" : "Link the Gantt to the Programme first (File > Build from the Programme)" })}
+            </div><div className="rcap">Properties</div></div>
           </>
         )}
         {tab === "View" && (
@@ -399,6 +428,19 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
             </div><div className="rcap">Outline</div></div>
           </>
         )}
+        {tab === "Format" && (
+          <>
+            <div className="rgroup"><div className="rrow">
+              {b("Format bars", () => { setFmtMode("selected"); setPanel("format"); }, { disabled: false, on: panel === "format" && fmtMode === "selected", title: "Shape and colour of the selected tasks' bars" })}
+              {b("Bar styles", () => { setFmtMode("styles"); setPanel("format"); }, { disabled: false, on: panel === "format" && fmtMode === "styles", title: "Shape and colour of every bar of a kind: tasks, critical tasks, summaries, milestones" })}
+              {b("Reset bars", () => commit(resetTaskBar(rows, selUids)), { disabled: ro || !selUids.length, title: "Take the selected tasks' bars back to the project's style" })}
+            </div><div className="rcap">Bars</div></div>
+            <div className="rgroup"><div className="rrow">
+              <label className="rchk"><input type="checkbox" checked={showCritical} onChange={(e) => patch({ showCritical: e.target.checked })} /> Critical tasks</label>
+              <label className="rchk"><input type="checkbox" checked={showBaseline} onChange={(e) => patch({ showBaseline: e.target.checked })} /> Baseline</label>
+            </div><div className="rcap">Show on the chart</div></div>
+          </>
+        )}
         {tab === "Project" && (
           <>
             <div className="rgroup"><div className="rrow rfields">
@@ -423,11 +465,35 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
         <span>Start <strong>{X.formatDate(sched.start)}</strong></span>
         <span>Finish <strong>{X.formatDate(sched.finish)}</strong></span>
         <span><strong>{crit}</strong> critical</span>
+        {project.progLink && PS.inStep(model.syncStatus) && <span title="A change to a linked task on either side carries to the other">Linked to the Programme</span>}
         {arranged.filtered && view === "chart" && <span className="sep">Filtered: {vis.length} of {joined.length} rows shown <button className="linkbtn" onClick={() => patch({ filter: { ...NO_FILTER } })}>Clear</button></span>}
         {arranged.sorted && view === "chart" && sort && <span>Sorted by {COLUMN_BY_KEY.get(sort.key)?.title} {sort.dir === "asc" ? "▲" : "▼"} <button className="linkbtn" onClick={() => patch({ sort: null })}>Sort by ID</button></span>}
         {selUids.length > 0 && view === "chart" && <span className="sep">{selUids.length} selected</span>}
       </div>
       {sched.problems.length > 0 && <div className="notice warn wrap">{sched.problems.slice(0, 3).map((p) => <span key={p}>{p}</span>)}{sched.problems.length > 3 && <span>and {sched.problems.length - 3} more</span>}</div>}
+
+      {!project.progLink && model.programmeInfos && (
+        <div className="notice warn wrap">
+          <span>This Gantt isn't linked to the Programme, so a change on one side doesn't reach the other.</span>
+          <button className="btn" disabled={ro} onClick={fromProgramme} title="Replaces the Gantt's tasks with the Programme's, linked">Build from the Programme and link</button>
+        </div>
+      )}
+      {project.progLink && model.syncStatus && !PS.inStep(model.syncStatus) && (() => {
+        const s = model.syncStatus!;
+        const parts = [
+          s.toProgramme ? `${s.toProgramme} task${s.toProgramme === 1 ? "" : "s"} changed in the Gantt ${s.toProgramme === 1 ? "isn't" : "aren't"} in the Programme yet` : "",
+          s.toGantt ? `${s.toGantt} task${s.toGantt === 1 ? "" : "s"} changed in the Programme ${s.toGantt === 1 ? "isn't" : "aren't"} in the Gantt yet` : "",
+          s.created ? `${s.created} new Programme task${s.created === 1 ? "" : "s"} ${s.created === 1 ? "isn't" : "aren't"} in the Gantt` : "",
+          s.removed ? `${s.removed} Gantt task${s.removed === 1 ? "" : "s"} no longer ${s.removed === 1 ? "has" : "have"} a Programme task` : "",
+        ].filter(Boolean);
+        const both = editable && ws.canEdit(progPkg);
+        return (
+          <div className="notice warn wrap">
+            <span>{parts.join("; ")}. {both ? "" : "Check out both the Programme and the Gantt and changes carry across by themselves."}</span>
+            <button className="btn primary" disabled={!both} onClick={ws.syncNow}>Carry across now</button>
+          </div>
+        );
+      })()}
 
       {view === "resources" && <GanttResources ws={ws} project={project} sched={sched} pkgId={pkgId} editable={editable} />}
       {view === "calendars" && <GanttCalendars ws={ws} project={project} pkgId={pkgId} editable={editable} />}
@@ -438,17 +504,28 @@ export function Gantt({ ws, jobId }: { ws: Workspace; jobId: string }) {
               <GanttTable
                 ref={tableRef} rows={vis} columns={columns} ctx={ctx} selected={selected} collapsed={collapsed} editing={editing} sort={sort} readOnly={ro}
                 onSort={(k) => patch({ sort: nextSort(sort, k) })}
+                onResize={(k, w) => setSettings((s) => ({ ...s, widths: { ...s.widths, [k]: clampWidth(w) } }))}
+                onResetWidth={(k) => setSettings((s) => { const { [k]: _gone, ...rest } = s.widths; return { ...s, widths: rest }; })}
                 onSelect={select} onToggle={(uid) => setCollapsed((c) => { const n = new Set(c); n.has(uid) ? n.delete(uid) : n.add(uid); return n; })}
                 onEdit={setEditing} onCommit={onCommit} onWheel={(dy) => { if (chartRef.current) chartRef.current.scrollTop += dy; }}
               />
             </div>
             <div className="gantt-split" role="separator" aria-orientation="vertical" aria-label="Resize the table" onPointerDown={startSplit} />
             <GanttChart
-              ref={chartRef} rows={vis} scale={scale} calendar={cal} selected={selected} showBaseline={showBaseline} showCritical={showCritical} today={todayMin}
+              ref={chartRef} rows={vis} scale={scale} calendar={cal} selected={selected} showBaseline={showBaseline} showCritical={showCritical} barStyles={project.barStyles} today={todayMin}
               statusDate={project.statusDate ? G.toMin(project.statusDate) : null} readOnly={ro}
               onSelect={select} onMove={onMove} onResize={onResize} onLink={onLink}
               onScroll={(top) => { if (tableRef.current) tableRef.current.scrollTop = top; }}
             />
+            {panel === "format" && (
+              <GanttFormat
+                mode={fmtMode} onMode={setFmtMode} selected={selUids.map((u) => joined.find((r) => r.task.uid === u)!).filter(Boolean)} styles={project.barStyles} showCritical={showCritical} readOnly={ro}
+                onTask={(pt) => commit(setTaskBar(rows, selUids, pt))} onResetTask={() => commit(resetTaskBar(rows, selUids))}
+                onStyle={(cat: BarCategory, pt) => ws.edit(pkgId, "gantt:config", (c) => ({ ...c, barStyles: setStyle(c.barStyles, cat, pt) }))}
+                onResetStyle={(cat: BarCategory) => ws.edit(pkgId, "gantt:config", (c) => { const { [cat]: _gone, ...rest } = (c.barStyles ?? {}) as Record<string, BarFormat>; return { ...c, barStyles: rest }; })}
+                onClose={() => setPanel(null)}
+              />
+            )}
             {panel === "columns" && <GanttColumns keys={settings.columns} onChange={(columns) => patch({ columns })} onClose={() => setPanel(null)} />}
             {panel === "info" && one && <GanttInfo task={one.task} s={one.s} project={project} readOnly={ro} idOf={idOf} uidOf={uidOf} onEdit={updateTask} onAssign={setResources} onClose={() => setPanel(null)} />}
           </div>

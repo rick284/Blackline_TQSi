@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_COLUMNS } from "../src/lib/ganttColumns.js";
-import { defaultSettings, nextSort, parseSettings } from "../src/lib/ganttSettings.js";
+import { clampWidth, defaultSettings, nextSort, parseSettings } from "../src/lib/ganttSettings.js";
 
 describe("saved Gantt view", () => {
   it("falls back to the default for nothing, rubbish or the wrong shape", () => {
@@ -21,6 +21,12 @@ describe("saved Gantt view", () => {
     expect([s.zoom, s.leftW, s.showCritical, s.showBaseline]).toEqual(["days", 1400, false, true]);
     const bad = parseSettings(JSON.stringify({ sort: { key: "nope", dir: "asc" }, filter: { kind: "weird", text: 5 }, zoom: "decades", leftW: "wide" }));
     expect([bad.sort, bad.filter.kind, bad.filter.text, bad.zoom, bad.leftW]).toEqual([null, "all", "", "weeks", 560]);
+  });
+  it("keeps dragged column widths within limits, and only for columns that exist", () => {
+    const s = parseSettings(JSON.stringify({ widths: { name: 400, duration: 5, start: 99999, bogus: 100, finish: "wide" } }));
+    expect(s.widths).toEqual({ name: 400, duration: 32, start: 700 });
+    expect(parseSettings(JSON.stringify({ widths: 7 })).widths).toEqual({});
+    expect(clampWidth(80.4)).toBe(80);
   });
   it("cycles a heading's sort: ascending, descending, off; a new heading starts ascending", () => {
     const a = nextSort(null, "name");

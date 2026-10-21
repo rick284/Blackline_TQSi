@@ -25,6 +25,22 @@ export interface Baseline {
   durationMin: number;
 }
 
+/** The middle of a bar: solid, half height, outline only, hatched or dotted. */
+export type BarShape = "solid" | "thin" | "outline" | "hatched" | "dotted";
+/** What is drawn at the start or end of a bar (for a milestone, the start marker is its shape). */
+export type EndShape = "none" | "arrow" | "triangle" | "diamond" | "circle" | "square" | "bracket";
+/** How a bar looks. Any field left out takes the next level down: the task's own, then the project's style for its kind, then the usual. */
+export interface BarFormat {
+  shape?: BarShape;
+  /** Colours as #rrggbb */
+  fill?: string;
+  border?: string;
+  progress?: string;
+  start?: EndShape;
+  end?: EndShape;
+}
+export type BarCategory = "task" | "critical" | "summary" | "milestone";
+
 export interface GTask {
   uid: number;
   name: string;
@@ -43,6 +59,12 @@ export interface GTask {
   notes: string;
   active: boolean;
   baseline: Baseline | null;
+  /** How this task's bar looks, when it isn't the project's usual (Format Bar). Not part of an MS Project file. */
+  bar?: BarFormat;
+  /** The tender Programme task this one mirrors, so a change on either side carries to the other */
+  progId?: string;
+  /** The Programme's values for it when the two were last in step: lets a change on either side be told apart from a change on both */
+  progSync?: { name: string; days: number; preds: string[] };
 }
 
 /** Minutes from midnight. */
@@ -92,6 +114,10 @@ export interface GProject {
   /** Working minutes in a day (default 480); used to show durations in days */
   minutesPerDay: number;
   minutesPerWeek: number;
+  /** The project's bar styles by kind of task (Format > Bar Styles); anything not here is the usual */
+  barStyles?: Partial<Record<BarCategory, BarFormat>>;
+  /** Whether the Gantt is linked to the tender Programme: a change to a linked task on either side carries to the other */
+  progLink?: boolean;
   tasks: GTask[];
   calendars: GCalendar[];
   resources: GResource[];

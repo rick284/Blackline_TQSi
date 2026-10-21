@@ -1,6 +1,8 @@
 import { forwardRef, useMemo, useRef, useState } from "react";
 import { gantt as G } from "@blackline/tender/core";
+import { resolve } from "../lib/ganttBars.js";
 import { ROW_H, TIER_H, nonWorking, tiers, xOf, type Scale } from "../lib/ganttView.js";
+import { BarGlyph, Patterns } from "./GanttBarGlyph.js";
 
 export interface ChartRow { task: G.GTask; s: G.ScheduledTask }
 export type End = "start" | "finish";
@@ -12,6 +14,8 @@ interface Props {
   selected: Set<number>;
   showBaseline: boolean;
   showCritical: boolean;
+  /** The project's bar styles by kind of task */
+  barStyles: G.GProject["barStyles"];
   today: number | null;
   statusDate: number | null;
   readOnly: boolean;
@@ -29,7 +33,7 @@ type Drag =
   | { kind: "link"; uid: number; end: End; x0: number; y0: number; x: number; y: number };
 
 const BAR_H = 12;
-const INK = "#000", GREY = "#8a8a8a", LIGHT = "#bdbdbd", NONWORK = "#efefef", SEL = "#d9d9d9";
+const INK = "#000", LIGHT = "#bdbdbd", NONWORK = "#efefef", SEL = "#d9d9d9";
 
 /** The timeline: two-tier timescale, non-working time, today line, bars, summary brackets, milestones, link arrows, baseline marks. */
 export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(p, ref) {
@@ -41,6 +45,7 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
   const shade = useMemo(() => nonWorking(p.calendar, scale), [p.calendar, scale]);
   const idx = useMemo(() => new Map(rows.map((r, i) => [r.task.uid, i])), [rows]);
   const height = Math.max(rows.length * ROW_H, 1);
+  const formats = useMemo(() => new Map(rows.map((r) => [r.task.uid, resolve(r.task, r.s, p.barStyles, p.showCritical)])), [rows, p.barStyles, p.showCritical]);
 
   const geom = (r: ChartRow, i: number) => {
     let x1 = xOf(scale, r.s.startMin), x2 = xOf(scale, r.s.finishMin);
@@ -116,7 +121,7 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
   const drawBar = (r: ChartRow, i: number) => {
     const { x1, x2, y } = geom(r, i);
     const cy = y + ROW_H / 2;
-    const crit = p.showCritical && r.s.critical;
+    const f = formats.get(r.task.uid)!;
     const off = !r.task.active;
     const sel = (e: React.PointerEvent) => p.onSelect(r.task.uid, e.ctrlKey || e.metaKey ? "toggle" : e.shiftKey ? "range" : "one");
     const base = r.task.baseline && p.showBaseline ? (
@@ -126,10 +131,8 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
       return (
         <g key={`b${r.task.uid}`} data-bar={r.task.uid} opacity={off ? 0.4 : 1} onPointerDown={sel}>
           {base}
-          <rect x={x1} y={cy - 5} width={Math.max(2, x2 - x1)} height={6} fill={INK} />
-          <path d={`M${x1},${cy + 1} v5 l5,-5 z`} fill={INK} />
-          <path d={`M${x2},${cy + 1} v5 l-5,-5 z`} fill={INK} />
-          {r.s.percent > 0 && <rect x={x1} y={cy - 2} width={Math.max(0, (x2 - x1) * r.s.percent / 100)} height={2} fill="#fff" />}
+          <BarGlyph f={f} x1={x1} x2={x2} cy={cy} percent={r.s.percent} kind="summary" />
+          <rect x={x1} y={cy - 7} width={Math.max(2, x2 - x1)} height={14} fill="transparent" />
         </g>
       );
     }
@@ -137,7 +140,8 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
       return (
         <g key={`b${r.task.uid}`} data-bar={r.task.uid} opacity={off ? 0.4 : 1} onPointerDown={(e) => { sel(e); begin(e, { kind: "move", uid: r.task.uid, x0: point(e).x, dx: 0 }); }} style={{ cursor: p.readOnly ? "default" : "grab" }}>
           {base}
-          <path d={`M${x1},${cy - 7} l7,7 l-7,7 l-7,-7 z`} fill={crit ? INK : "#fff"} stroke={INK} strokeWidth={1.5} />
+          <BarGlyph f={f} x1={x1} x2={x1} cy={cy} percent={0} kind="milestone" />
+          <rect x={x1 - 8} y={cy - 8} width={16} height={16} fill="transparent" />
         </g>
       );
     }
@@ -145,9 +149,9 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
     return (
       <g key={`b${r.task.uid}`} opacity={off ? 0.4 : 1}>
         {base}
-        <rect data-bar={r.task.uid} x={x1} y={cy - BAR_H / 2} width={w} height={BAR_H} fill={crit ? INK : GREY} stroke={INK} strokeWidth={1} style={{ cursor: p.readOnly ? "default" : "grab" }}
+        <BarGlyph f={f} x1={x1} x2={x2} cy={cy} percent={r.s.percent} kind="task" />
+        <rect data-bar={r.task.uid} x={x1} y={cy - BAR_H / 2} width={w} height={BAR_H} fill="transparent" style={{ cursor: p.readOnly ? "default" : "grab" }}
           onPointerDown={(e) => { sel(e); begin(e, { kind: "move", uid: r.task.uid, x0: point(e).x, dx: 0 }); }} />
-        {r.s.percent > 0 && <rect x={x1} y={cy - 2} width={Math.max(0, w * r.s.percent / 100)} height={4} fill={crit ? "#fff" : INK} pointerEvents="none" />}
         {!p.readOnly && <rect x={x2 - 4} y={cy - BAR_H / 2} width={5} height={BAR_H} fill="transparent" style={{ cursor: "ew-resize" }} onPointerDown={(e) => begin(e, { kind: "resize", uid: r.task.uid, x0: point(e).x, dx: 0 })} />}
         {!p.readOnly && (
           <>
@@ -158,7 +162,6 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
       </g>
     );
   };
-
   return (
     <div className="gantt-scroll" ref={ref} onScroll={(e) => p.onScroll((e.target as HTMLDivElement).scrollTop)}>
       <div className="gantt-head" style={{ width: scale.width }}>
@@ -172,6 +175,7 @@ export const GanttChart = forwardRef<HTMLDivElement, Props>(function GanttChart(
         </svg>
       </div>
       <svg ref={svgRef} width={scale.width} height={height} onPointerMove={move} onPointerUp={end} onPointerCancel={() => setDrag(null)} style={{ display: "block", touchAction: "none" }} role="img" aria-label="Gantt chart">
+        <Patterns formats={[...formats.values()]} />
         {rows.map(drawRowBg)}
         {shade.map((s, i) => <rect key={`n${i}`} x={s.x} y={0} width={s.w} height={height} fill={NONWORK} opacity={0.7} pointerEvents="none" />)}
         {head.bottom.map((t, i) => <line key={`g${i}`} x1={t.x} x2={t.x} y1={0} y2={height} stroke="#e0e0e0" strokeWidth={0.5} pointerEvents="none" />)}
