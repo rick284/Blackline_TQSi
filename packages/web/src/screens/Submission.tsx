@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { letterDoc } from "../lib/letterDoc.js";
+import { LetterSheet } from "./LetterSheet.js";
 import { assembleInputs, computeTenderEstimate, diffEstimates, submission as SUB, type DisplayEstimate } from "@blackline/tender/core";
 import { api, ApiError } from "../api.js";
 import { money, pct } from "../lib/fmt.js";
@@ -48,6 +51,7 @@ export function Submission({ ws, jobId }: { ws: Workspace; jobId: string }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [cmp, setCmp] = useState<Comparison | null>(null);
+  const [preview, setPreview] = useState(false);
   const [newQ, setNewQ] = useState("");
   const [newA, setNewA] = useState("");
 
@@ -154,8 +158,23 @@ export function Submission({ ws, jobId }: { ws: Workspace; jobId: string }) {
       <div className="submission">
         <div className="sub-main">
           {cmp && <div ref={cmpRef}><CompareView c={cmp} onClose={() => setCmp(null)} /></div>}
+          {preview && L && (() => {
+            const doc = letterDoc({ company: session!.orgName, today: new Date(), letter: L, qualifications: sub.qualifications, alternatives: sub.alternatives, schedule: model.estimate.schedule });
+            const root = document.getElementById("print-root");
+            return (
+              <section className="letter-preview">
+                <h3>Letter as the client will read it <span className="sub">your work now, not an issued revision</span>
+                  <button className="btn primary" style={{ marginLeft: "auto" }} onClick={() => window.print()}>Print or save as PDF</button>
+                  <button className="btn" onClick={() => setPreview(false)}>Close preview</button>
+                </h3>
+                {!doc.scheduleOk && <p className="muted">The price schedule does not add up to the tender yet (see Ready to issue), so check the figures before this goes out.</p>}
+                <LetterSheet doc={doc} />
+                {root && createPortal(<LetterSheet doc={doc} />, root)}
+              </section>
+            );
+          })()}
           <section>
-            <h3>Tender letter</h3>
+            <h3>Tender letter <button className="btn" style={{ marginLeft: "auto" }} onClick={() => setPreview((p) => !p)}>{preview ? "Hide preview" : "Preview and print"}</button></h3>
             <div className="sub-form">
               {field("To", "addressee")}{field("Attention", "attention")}
               {field("Your reference", "reference")}{field("Valid for (days)", "validityDays", { width: 70 })}

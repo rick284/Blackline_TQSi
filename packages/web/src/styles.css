@@ -225,6 +225,32 @@ table.plain tr.picked td { background: var(--selected); }
 @media (max-width: 1150px) { .submission { grid-template-columns: 1fr; overflow: auto; } .submission { grid-auto-rows: max-content; align-content: start; } .sub-main, .sub-side { overflow: visible; min-height: auto; } .sub-side { border-top: 1px solid var(--line-strong); } }
 @media (max-width: 640px) { .sub-form { grid-template-columns: 1fr; } }
 
+/* tender letter: on screen as a page, and the same page when printed */
+#print-root { display: none; }
+.letter-preview { background: var(--workspace); }
+.letter-preview > p { margin: 8px 12px 0; }
+.letter-sheet { background: var(--paper); border: 1px solid var(--line-strong); margin: 12px; padding: 28px 36px; max-width: 760px; font-size: 12px; line-height: 1.5; color: #000; }
+.letter-sheet header { display: flex; justify-content: space-between; margin-bottom: 18px; }
+.letter-sheet h1 { font-size: 14px; margin: 14px 0 8px; }
+.letter-sheet h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; margin: 18px 0 6px; }
+.letter-sheet p { margin: 0 0 8px; }
+.letter-sheet table { width: 100%; border-collapse: collapse; }
+.letter-sheet th, .letter-sheet td { padding: 2px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.letter-sheet th { background: var(--header); font-size: 10px; text-transform: uppercase; }
+.letter-sheet .r { text-align: right; font-variant-numeric: tabular-nums; }
+.letter-sheet tr.grp td { font-weight: 600; background: var(--panel); }
+.letter-sheet tr.sum td, .letter-sheet tfoot td { font-weight: 600; border-top: 1px solid #000; }
+.letter-sheet ol { margin: 0 0 8px; padding-left: 20px; }
+.letter-sheet li { margin-bottom: 3px; }
+.letter-sheet .sign { margin-top: 18px; }
+@media print {
+  #root { display: none !important; }
+  #print-root { display: block; }
+  #print-root .letter-sheet { border: 0; margin: 0; padding: 0; max-width: none; }
+  html, body { background: #fff; height: auto; overflow: visible; }
+  .letter-sheet tr, .letter-sheet li { break-inside: avoid; }
+}
+
 /* programme and gantt */
 .prog-strip { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 5px 12px; background: var(--paper); border-bottom: 1px solid var(--line-strong); }
 .prog-strip label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
