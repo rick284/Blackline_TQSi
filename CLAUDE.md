@@ -27,7 +27,7 @@ Estimating and cost-control platform for NZ construction contractors. Read `ARCH
 - Roles: viewer (read) < estimator (checkout, check-in, add-only records, create jobs) < manager (break locks, import, resolve parked, add estimators/viewers) < owner (adds managers).
 - Auth: scrypt password hashes, opaque session tokens stored as SHA-256, 14-day sessions, minimum password 10 characters. Not done: rate limiting, password reset, email verification, session listing.
 - Endpoints: `/auth/*`, `/me`, `/org/members`, `/audit`, `/jobs`, `/jobs/:id/{packages,estimate,parked,append,import-workbook}`, `/packages/:id/{checkout,checkin,release,break-lock}`, `/parked/:id/resolve`. `GET /jobs/:id/estimate` recalculates from checked-in records with the same engine the clients use.
-- Run: `node --experimental-strip-types packages/server/src/main.ts` (set `DATA_DIR` to keep the database between runs).
+- Run: `npm start -w @blackline/server` (uses vite-node; set `PORT`, and `DATA_DIR` to keep the database between runs). Smoke-tested: starts, migrates, answers `/health`.
 
 ## Status
 Built (all with tests, 257 passing):

@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "start": "node --experimental-strip-types src/main.ts"
+    "start": "vite-node src/main.ts"
   },
   "dependencies": {
     "@blackline/checkout": "*",
