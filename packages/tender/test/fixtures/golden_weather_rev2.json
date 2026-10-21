@@ -1,0 +1,4176 @@
+{
+ "source": "NZ_Weather_Risk_Estimating_Tool_Rev2.xlsx recalculated in LibreOffice",
+ "scenarios": [
+  {
+   "station": "Auckland",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 0,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Bulk earthworks",
+     "start": "2025-03-06",
+     "finish": "2025-03-06",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "External concrete finishing",
+     "start": "2033-11-01",
+     "finish": "2033-11-01",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2038-08-16",
+     "finish": "2038-10-30",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_exposure": 0.5,
+      "wind_loss": 0.1
+     }
+    },
+    {
+     "task": "Building platform / pad prep",
+     "start": "2026-05-28",
+     "finish": "2026-06-27",
+     "critical": true,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.24916573971079,
+      "adjusted_wet_probability": 0.24916573971079,
+      "wind_probability": 0.113500597371565,
+      "rain_impact": 0.14825361512792,
+      "carryover_impact": 0.0423581757508343,
+      "wind_impact": 0.0101299283154122,
+      "combined_impact": 0.200741719194166,
+      "direct_allowance": 0,
+      "lost_wd": 0.200741719194166,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.311111111111111,
+      "adjusted_wet_probability": 0.311111111111111,
+      "wind_probability": 0.222222222222222,
+      "rain_impact": 0.224,
+      "carryover_impact": 0.0056,
+      "wind_impact": 0.008,
+      "combined_impact": 0.2376,
+      "direct_allowance": 237.6,
+      "lost_wd": 0.2376,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 55,
+      "wet_probability": 0.41166380153032,
+      "adjusted_wet_probability": 0.41166380153032,
+      "wind_probability": 0.200977517106549,
+      "rain_impact": 0.0555746132065932,
+      "carryover_impact": 0.00493996561836384,
+      "wind_impact": 0.00241173020527859,
+      "combined_impact": 0.0629263090302356,
+      "direct_allowance": 5243.8588760986,
+      "lost_wd": 3.46094699666296,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 22,
+      "wet_probability": 0.469941348973607,
+      "adjusted_wet_probability": 0.469941348973607,
+      "wind_probability": 0.139386698526484,
+      "rain_impact": 0.284608229472141,
+      "carryover_impact": 0.0798900293255132,
+      "wind_impact": 0.00888590203106332,
+      "combined_impact": 0.373384160828717,
+      "direct_allowance": 31115.3454911126,
+      "lost_wd": 8.21445153823178,
+      "cp_delay_wd": 8.21445153823178,
+      "status": "AMBER - task factors uncalibrated"
+     }
+    ],
+    "exposed_pool": 167666.66,
+    "direct": 36596.8043672112,
+    "cp_delay_wd": 8.21445153823178,
+    "prelims": 5474.93195023148,
+    "weeks": 2,
+    "hire": 0,
+    "recovery": 0,
+    "total": 42071.7363174427
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 4,
+   "local_factor": 0.8,
+   "wind_override": 0.1,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Scaffolding",
+     "start": "2027-11-03",
+     "finish": "2028-03-12",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {
+      "wind_loss": 0.5
+     }
+    },
+    {
+     "task": "Roofing",
+     "start": "2036-04-02",
+     "finish": "2036-04-02",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "wind_loss": 0.1,
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "Internal framing",
+     "start": "2033-02-16",
+     "finish": "2033-06-26",
+     "critical": true,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 74,
+      "wet_probability": 0.261412278807655,
+      "adjusted_wet_probability": 0.209129823046124,
+      "wind_probability": 0.1,
+      "rain_impact": 0.0274482892748038,
+      "carryover_impact": 0.00209129823046124,
+      "wind_impact": 0.00625,
+      "combined_impact": 0.035789587505265,
+      "direct_allowance": 89.4739687631626,
+      "lost_wd": 2.64842947538961,
+      "cp_delay_wd": 2.64842947538961,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.320238095238095,
+      "adjusted_wet_probability": 0.256190476190476,
+      "wind_probability": 0.1,
+      "rain_impact": 0.163321428571429,
+      "carryover_impact": 0.108880952380952,
+      "wind_impact": 0.002975,
+      "combined_impact": 0.275177380952381,
+      "direct_allowance": 0,
+      "lost_wd": 0.275177380952381,
+      "cp_delay_wd": 0.275177380952381,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 74,
+      "wet_probability": 0.346895745508198,
+      "adjusted_wet_probability": 0.277516596406558,
+      "wind_probability": 0.1,
+      "rain_impact": 0.00124882468382951,
+      "carryover_impact": 0,
+      "wind_impact": 0.00015,
+      "combined_impact": 0.00139882468382951,
+      "direct_allowance": 69.9412341914755,
+      "lost_wd": 0.103513026603384,
+      "cp_delay_wd": 0.103513026603384,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 52500,
+    "direct": 159.415202954638,
+    "cp_delay_wd": 3.02711988294538,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 0,
+    "total": 1393.91520295464
+   }
+  },
+  {
+   "station": "Christchurch",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": 0.1,
+   "daily_prelims": 584,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Roofing",
+     "start": "2026-12-13",
+     "finish": "2026-12-14",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Steel erection / crane lifts",
+     "start": "2030-12-10",
+     "finish": "2031-12-25",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "carryover": 0.5,
+      "rain_exposure": 0.5
+     }
+    },
+    {
+     "task": "Erosion & sediment controls",
+     "start": "2027-07-31",
+     "finish": "2027-07-31",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall installation",
+     "start": "2029-01-14",
+     "finish": "2030-01-29",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.226881720430108,
+      "adjusted_wet_probability": 0.226881720430108,
+      "wind_probability": 0.1,
+      "rain_impact": 0.144637096774194,
+      "carryover_impact": 0.00385698924731183,
+      "wind_impact": 0.0223125,
+      "combined_impact": 0.170806586021505,
+      "direct_allowance": 170.806586021505,
+      "lost_wd": 0.170806586021505,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 219,
+      "wet_probability": 0.227084731034572,
+      "adjusted_wet_probability": 0.227084731034572,
+      "wind_probability": 0.1,
+      "rain_impact": 0.0635837246896802,
+      "carryover_impact": 0.0908338924138289,
+      "wind_impact": 0.0196,
+      "combined_impact": 0.174017617103509,
+      "direct_allowance": 0,
+      "lost_wd": 38.1098581456685,
+      "cp_delay_wd": 38.1098581456685,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0.1,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0.007,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": "#VALUE!",
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 218,
+      "wet_probability": 0.225454673488925,
+      "adjusted_wet_probability": 0.225454673488925,
+      "wind_probability": 0.1,
+      "rain_impact": 0.0670727653629552,
+      "carryover_impact": 0.00789091357211237,
+      "wind_impact": 0.00525,
+      "combined_impact": 0.0802136789350676,
+      "direct_allowance": 990.291609618295,
+      "lost_wd": 17.4865820078447,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     }
+    ],
+    "exposed_pool": 16845.67,
+    "direct": "#VALUE!",
+    "cp_delay_wd": "#VALUE!",
+    "prelims": "#VALUE!",
+    "weeks": "#VALUE!",
+    "hire": "#VALUE!",
+    "recovery": 0,
+    "total": "#VALUE!"
+   }
+  },
+  {
+   "station": "Queenstown",
+   "working_days_per_week": 5,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 0,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Drainage trenching",
+     "start": "2037-08-01",
+     "finish": "2037-10-15",
+     "critical": true,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "External block / brick laying",
+     "start": "2029-09-06",
+     "finish": "2030-01-14",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {
+      "rain_loss": 1.0,
+      "carryover": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 54,
+      "wet_probability": 0.269933278794977,
+      "adjusted_wet_probability": 0.310423270614224,
+      "wind_probability": 0,
+      "rain_impact": 0.153349095683426,
+      "carryover_impact": 0.0372507924737068,
+      "wind_impact": 0,
+      "combined_impact": 0.190599888157133,
+      "direct_allowance": 6353.32896990481,
+      "lost_wd": 10.2923939604852,
+      "cp_delay_wd": 10.2923939604852,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 93,
+      "wet_probability": 0.268363391764303,
+      "adjusted_wet_probability": 0.308617900528949,
+      "wind_probability": 0,
+      "rain_impact": 0.183627650814724,
+      "carryover_impact": 0.216032530370264,
+      "wind_impact": 0,
+      "combined_impact": 0.399660181184988,
+      "direct_allowance": 5933.22316201255,
+      "lost_wd": 37.1683968502039,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 48179,
+    "direct": 12286.5521319174,
+    "cp_delay_wd": 10.2923939604852,
+    "prelims": 6859.88057466338,
+    "weeks": 3,
+    "hire": 0,
+    "recovery": 0,
+    "total": 19146.4327065807
+   }
+  },
+  {
+   "station": "Wellington",
+   "working_days_per_week": 7,
+   "local_factor": 1,
+   "wind_override": 0.1,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Manholes / chambers",
+     "start": "2030-03-19",
+     "finish": "2031-04-03",
+     "critical": false,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2029-05-14",
+     "finish": "2029-05-15",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 381,
+      "wet_probability": 0.349223612082877,
+      "adjusted_wet_probability": 0.349223612082877,
+      "wind_probability": 0.1,
+      "rain_impact": 0.141435562893565,
+      "carryover_impact": 0.0209534167249726,
+      "wind_impact": 0.00225,
+      "combined_impact": 0.164638979618538,
+      "direct_allowance": 411.597449046345,
+      "lost_wd": 62.7274512346629,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.428842504743833,
+      "adjusted_wet_probability": 0.428842504743833,
+      "wind_probability": 0.1,
+      "rain_impact": 0.242403225806452,
+      "carryover_impact": 0.0182258064516129,
+      "wind_impact": 0.00595,
+      "combined_impact": 0.266579032258064,
+      "direct_allowance": 266.579032258064,
+      "lost_wd": 0.533158064516129,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     }
+    ],
+    "exposed_pool": 3500,
+    "direct": 678.176481304409,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 678.176481304409
+   }
+  },
+  {
+   "station": "Kaitaia",
+   "working_days_per_week": 7,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Internal MEP rough-in / fit-off",
+     "start": "2036-03-24",
+     "finish": "2036-06-07",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 76,
+      "wet_probability": 0.377669522045583,
+      "adjusted_wet_probability": 0.377669522045583,
+      "wind_probability": 0,
+      "rain_impact": 0.00169951284920512,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00169951284920512,
+      "direct_allowance": 25.230406920059,
+      "lost_wd": 0.129162976539589,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 14845.67,
+    "direct": 25.230406920059,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 25.230406920059
+   }
+  },
+  {
+   "station": "Hokitika",
+   "working_days_per_week": 6,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2026-04-03",
+     "finish": "2026-06-17",
+     "critical": false,
+     "labour": 1000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Erosion & sediment controls",
+     "start": "2037-06-29",
+     "finish": "2037-06-30",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Building platform / pad prep",
+     "start": "2034-08-06",
+     "finish": "2034-08-17",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Subbase / pavement prep",
+     "start": "2032-08-01",
+     "finish": "2032-10-15",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Fitout / cabinetry / joinery",
+     "start": "2027-10-11",
+     "finish": "2027-10-12",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "nonrecoverable": 0.5,
+      "wind_loss": 0.75
+     }
+    },
+    {
+     "task": "Workshop fabrication / sheltered prep",
+     "start": "2036-04-26",
+     "finish": "2036-05-26",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 65,
+      "wet_probability": 0.468368899917287,
+      "adjusted_wet_probability": 0.37469511993383,
+      "wind_probability": 0,
+      "rain_impact": 0.0859925300248139,
+      "carryover_impact": 0.00449634143920596,
+      "wind_impact": 0,
+      "combined_impact": 0.0904888714640199,
+      "direct_allowance": 3106.78428530178,
+      "lost_wd": 5.88177664516129,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.492222222222222,
+      "adjusted_wet_probability": 0.393777777777778,
+      "wind_probability": 0,
+      "rain_impact": 0.117148888888889,
+      "carryover_impact": 0.0220515555555556,
+      "wind_impact": 0,
+      "combined_impact": 0.139200444444444,
+      "direct_allowance": 487.201555555556,
+      "lost_wd": 0.278400888888889,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 10,
+      "wet_probability": 0.494623655913978,
+      "adjusted_wet_probability": 0.395698924731183,
+      "wind_probability": 0,
+      "rain_impact": 0.239645161290323,
+      "carryover_impact": 0.0672688172043011,
+      "wind_impact": 0,
+      "combined_impact": 0.306913978494624,
+      "direct_allowance": 14019.5236236559,
+      "lost_wd": 3.06913978494624,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 65,
+      "wet_probability": 0.537146953405018,
+      "adjusted_wet_probability": 0.429717562724014,
+      "wind_probability": 0,
+      "rain_impact": 0.242897852329749,
+      "carryover_impact": 0.0730519856630824,
+      "wind_impact": 0,
+      "combined_impact": 0.315949837992832,
+      "direct_allowance": 315.949837992832,
+      "lost_wd": 20.536739469534,
+      "cp_delay_wd": 20.536739469534,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.572043010752688,
+      "adjusted_wet_probability": 0.45763440860215,
+      "wind_probability": 0,
+      "rain_impact": 0.0018305376344086,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.0018305376344086,
+      "direct_allowance": 83.6171286021505,
+      "lost_wd": 0.0036610752688172,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 26,
+      "wet_probability": 0.47660876757651,
+      "adjusted_wet_probability": 0.381287014061208,
+      "wind_probability": 0,
+      "rain_impact": 0.000610059222497932,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000610059222497932,
+      "direct_allowance": 9.05673789766088,
+      "lost_wd": 0.0158615397849462,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 145037,
+    "direct": 18022.1331690059,
+    "cp_delay_wd": 20.536739469534,
+    "prelims": 11993.4558502079,
+    "weeks": 4,
+    "hire": 4938,
+    "recovery": 1500,
+    "total": 36453.5890192138
+   }
+  },
+  {
+   "station": "Chatham Islands",
+   "working_days_per_week": 7,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 0,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Decking",
+     "start": "2032-01-27",
+     "finish": "2033-02-10",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {
+      "rain_loss": 1.0,
+      "nonrecoverable": 1.0
+     }
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2036-07-26",
+     "finish": "2036-07-30",
+     "critical": true,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 0.1,
+      "rain_exposure": 0.75
+     }
+    },
+    {
+     "task": "Building platform / pad prep",
+     "start": "2026-05-24",
+     "finish": "2026-08-07",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "rain_loss": 0.75
+     }
+    },
+    {
+     "task": "Fitout / cabinetry / joinery",
+     "start": "2039-06-03",
+     "finish": "2039-07-03",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {
+      "nonrecoverable": 0.1,
+      "rain_loss": 0.75
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 381,
+      "wet_probability": 0.359678609863359,
+      "adjusted_wet_probability": 0.359678609863359,
+      "wind_probability": 0,
+      "rain_impact": 0.305726818383855,
+      "carryover_impact": 0.0143871443945344,
+      "wind_impact": 0,
+      "combined_impact": 0.32011396277839,
+      "direct_allowance": 3952.02134685428,
+      "lost_wd": 121.963419818567,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 5,
+      "wet_probability": 0.494623655913978,
+      "adjusted_wet_probability": 0.494623655913978,
+      "wind_probability": 0,
+      "rain_impact": 0.0315322580645161,
+      "carryover_impact": 0.0210215053763441,
+      "wind_impact": 0,
+      "combined_impact": 0.0525537634408602,
+      "direct_allowance": 1751.79193951613,
+      "lost_wd": 0.262768817204301,
+      "cp_delay_wd": 0.262768817204301,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 76,
+      "wet_probability": 0.491411997736276,
+      "adjusted_wet_probability": 0.491411997736276,
+      "wind_probability": 0,
+      "rain_impact": 0.297611391129032,
+      "carryover_impact": 0.0835400396151669,
+      "wind_impact": 0,
+      "combined_impact": 0.381151430744199,
+      "direct_allowance": 381.151430744199,
+      "lost_wd": 28.9675087365591,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 31,
+      "wet_probability": 0.511522719389525,
+      "adjusted_wet_probability": 0.511522719389525,
+      "wind_probability": 0,
+      "rain_impact": 0.00383642039542144,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00383642039542144,
+      "direct_allowance": 319.701686830385,
+      "lost_wd": 0.118929032258065,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 130012.33,
+    "direct": 6404.666403945,
+    "cp_delay_wd": 0.262768817204301,
+    "prelims": 153.456989247312,
+    "weeks": 1,
+    "hire": 0,
+    "recovery": 0,
+    "total": 6558.12339319231
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 0,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Exterior windows / joinery",
+     "start": "2038-06-23",
+     "finish": "2039-07-08",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "rain_exposure": 0.1,
+      "wind_loss": 0.5
+     }
+    },
+    {
+     "task": "Steel erection / crane lifts",
+     "start": "2025-03-15",
+     "finish": "2025-03-15",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Internal MEP rough-in / fit-off",
+     "start": "2036-03-21",
+     "finish": "2036-03-21",
+     "critical": true,
+     "labour": 1000,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 0.5
+     }
+    },
+    {
+     "task": "Drainage trenching",
+     "start": "2025-01-16",
+     "finish": "2025-01-16",
+     "critical": true,
+     "labour": 1000,
+     "plant": 33333.33,
+     "overrides": {
+      "wind_loss": 0.5
+     }
+    },
+    {
+     "task": "Bulk earthworks",
+     "start": "2032-08-13",
+     "finish": "2032-08-24",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 273,
+      "wet_probability": 0.362013413724434,
+      "adjusted_wet_probability": 0.289610730979548,
+      "wind_probability": 0.150112688220486,
+      "rain_impact": 0.00637143608155005,
+      "carryover_impact": 0.00159285902038751,
+      "wind_impact": 0.00412809892606336,
+      "combined_impact": 0.0120923940280009,
+      "direct_allowance": 12.0923940280009,
+      "lost_wd": 3.30122356964425,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.24916573971079,
+      "adjusted_wet_probability": 0.199332591768632,
+      "wind_probability": 0.113500597371565,
+      "rain_impact": 0.00448498331479422,
+      "carryover_impact": 0,
+      "wind_impact": 0.000102150537634409,
+      "combined_impact": 0.00458713385242862,
+      "direct_allowance": 157.491580309603,
+      "lost_wd": 0.00458713385242862,
+      "cp_delay_wd": 0.00458713385242862,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.218020022246941,
+      "adjusted_wet_probability": 0.174416017797553,
+      "wind_probability": 0.125448028673835,
+      "rain_impact": 0.0861615127919911,
+      "carryover_impact": 0.0209299221357063,
+      "wind_impact": 0.00501792114695341,
+      "combined_impact": 0.112109356074651,
+      "direct_allowance": 3849.08751819849,
+      "lost_wd": 0.112109356074651,
+      "cp_delay_wd": 0.112109356074651,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.472747497219132,
+      "adjusted_wet_probability": 0.378197997775306,
+      "wind_probability": 0.137395459976105,
+      "rain_impact": 0.225027808676307,
+      "carryover_impact": 0.064293659621802,
+      "wind_impact": 0.0122625448028674,
+      "combined_impact": 0.301584013100976,
+      "direct_allowance": 10052.7994314192,
+      "lost_wd": 2.41267210480781,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 106499.99,
+    "direct": "#VALUE!",
+    "cp_delay_wd": 0.116696489927079,
+    "prelims": 77.7782105363985,
+    "weeks": 1,
+    "hire": 0,
+    "recovery": 1500,
+    "total": "#VALUE!"
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 7,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Site establishment / temp fencing",
+     "start": "2026-09-22",
+     "finish": "2026-10-03",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "wind_loss": 0.1,
+      "wind_sensitivity": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 12,
+      "wet_probability": 0.405098919434292,
+      "adjusted_wet_probability": 0.405098919434292,
+      "wind_probability": 0.220430107526882,
+      "rain_impact": 0.0113427697441602,
+      "carryover_impact": 0.00324079135547434,
+      "wind_impact": 0.00881720430107527,
+      "combined_impact": 0.0234007654007098,
+      "direct_allowance": 1068.92356273902,
+      "lost_wd": 0.280809184808517,
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     }
+    ],
+    "exposed_pool": 45679,
+    "direct": 1068.92356273902,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 1068.92356273902
+   }
+  },
+  {
+   "station": "Christchurch",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 295,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2038-06-13",
+     "finish": "2038-06-14",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {
+      "rain_exposure": 0.1
+     }
+    },
+    {
+     "task": "External block / brick laying",
+     "start": "2033-08-27",
+     "finish": "2033-08-27",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_exposure": 0.1
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.286666666666667,
+      "adjusted_wet_probability": 0.286666666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.00774,
+      "carryover_impact": 0.00344,
+      "wind_impact": 0,
+      "combined_impact": 0.01118,
+      "direct_allowance": 138.0245906,
+      "lost_wd": 0.01118,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 45679,
+    "direct": "#VALUE!",
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 1500,
+    "total": "#VALUE!"
+   }
+  },
+  {
+   "station": "Queenstown",
+   "working_days_per_week": 5,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 295,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Internal MEP rough-in / fit-off",
+     "start": "2038-05-09",
+     "finish": "2038-07-23",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "nonrecoverable": 0.75
+     }
+    },
+    {
+     "task": "Internal MEP rough-in / fit-off",
+     "start": "2036-02-21",
+     "finish": "2036-03-03",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal flooring",
+     "start": "2035-05-24",
+     "finish": "2035-06-23",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 55,
+      "wet_probability": 0.282593935541655,
+      "adjusted_wet_probability": 0.324983025872904,
+      "wind_probability": 0,
+      "rain_impact": 0.00365605904107016,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00365605904107016,
+      "direct_allowance": 121.868622515475,
+      "lost_wd": 0.201083247258859,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.231749752738892,
+      "adjusted_wet_probability": 0.266512215649726,
+      "wind_probability": 0,
+      "rain_impact": 0.00119930497042377,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00119930497042377,
+      "direct_allowance": 0,
+      "lost_wd": 0.00959443976339014,
+      "cp_delay_wd": 0.00959443976339014,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 22,
+      "wet_probability": 0.292735073602704,
+      "adjusted_wet_probability": 0.33664533464311,
+      "wind_probability": 0,
+      "rain_impact": 0.000841613336607775,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000841613336607775,
+      "direct_allowance": 0.841613336607775,
+      "lost_wd": 0.018515493405371,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 34333.33,
+    "direct": 122.710235852083,
+    "cp_delay_wd": 0.00959443976339014,
+    "prelims": 6.39469410229953,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 1500,
+    "total": 1924.10492995438
+   }
+  },
+  {
+   "station": "Wellington",
+   "working_days_per_week": 7,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "External block / brick laying",
+     "start": "2030-05-02",
+     "finish": "2030-09-09",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "Manholes / chambers",
+     "start": "2029-09-15",
+     "finish": "2029-09-15",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 131,
+      "wet_probability": 0.418542133482492,
+      "adjusted_wet_probability": 0.418542133482492,
+      "wind_probability": 0,
+      "rain_impact": 0.136967913182145,
+      "carryover_impact": 0.146489746718872,
+      "wind_impact": 0,
+      "combined_impact": 0.283457659901017,
+      "direct_allowance": 992.101809653561,
+      "lost_wd": 37.1329534470333,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.362745098039216,
+      "adjusted_wet_probability": 0.362745098039216,
+      "wind_probability": 0,
+      "rain_impact": 0.146911764705882,
+      "carryover_impact": 0.0217647058823529,
+      "wind_impact": 0,
+      "combined_impact": 0.168676470588235,
+      "direct_allowance": 590.367647058823,
+      "lost_wd": 0.168676470588235,
+      "cp_delay_wd": 0.168676470588235,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 7000,
+    "direct": 1582.46945671238,
+    "cp_delay_wd": 0.168676470588235,
+    "prelims": 112.422867647059,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 0,
+    "total": 1989.89232435944
+   }
+  },
+  {
+   "station": "Kaitaia",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Internal plastering / stopping",
+     "start": "2033-03-28",
+     "finish": "2033-08-05",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Internal framing",
+     "start": "2031-12-26",
+     "finish": "2032-05-04",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "wind_sensitivity": 0.75,
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "Service trenches / ducting",
+     "start": "2028-03-17",
+     "finish": "2028-03-21",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Site establishment / temp fencing",
+     "start": "2036-07-28",
+     "finish": "2036-08-01",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 76,
+      "wet_probability": 0.434716005556413,
+      "adjusted_wet_probability": 0.434716005556413,
+      "wind_probability": 0,
+      "rain_impact": 0.00130414801666924,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00130414801666924,
+      "direct_allowance": 3.2603700416731,
+      "lost_wd": 0.0991152492668622,
+      "cp_delay_wd": 0.0991152492668622,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 74,
+      "wet_probability": 0.259769463482184,
+      "adjusted_wet_probability": 0.259769463482184,
+      "wind_probability": 0,
+      "rain_impact": 0.00116896258566983,
+      "carryover_impact": 0.0389654195223276,
+      "wind_impact": 0,
+      "combined_impact": 0.0401343821079974,
+      "direct_allowance": 1337.81260315197,
+      "lost_wd": 2.96994427599181,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.244868035190616,
+      "adjusted_wet_probability": 0.244868035190616,
+      "wind_probability": 0,
+      "rain_impact": 0.0991715542521994,
+      "carryover_impact": 0.0183651026392962,
+      "wind_impact": 0,
+      "combined_impact": 0.117536656891496,
+      "direct_allowance": 411.378299120235,
+      "lost_wd": 0.235073313782991,
+      "cp_delay_wd": 0.235073313782991,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.511730205278592,
+      "adjusted_wet_probability": 0.511730205278592,
+      "wind_probability": 0,
+      "rain_impact": 0.0716422287390029,
+      "carryover_impact": 0.00409384164222874,
+      "wind_impact": 0,
+      "combined_impact": 0.0757360703812317,
+      "direct_allowance": 3459.54795894428,
+      "lost_wd": 0.302944281524927,
+      "cp_delay_wd": 0.302944281524927,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 85012.33,
+    "direct": 5211.99923125816,
+    "cp_delay_wd": 0.63713284457478,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 1500,
+    "total": 7946.49923125816
+   }
+  },
+  {
+   "station": "Hokitika",
+   "working_days_per_week": 4,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "External concrete placing",
+     "start": "2038-04-08",
+     "finish": "2038-04-09",
+     "critical": true,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "carryover": 1.0,
+      "wind_sensitivity": 0.1
+     }
+    },
+    {
+     "task": "Internal framing",
+     "start": "2030-12-12",
+     "finish": "2030-12-12",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "wind_sensitivity": 0.75,
+      "carryover": 1.0
+     }
+    },
+    {
+     "task": "Deck framing",
+     "start": "2030-07-18",
+     "finish": "2030-11-25",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Internal tiling / wet areas",
+     "start": "2028-03-31",
+     "finish": "2028-04-11",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Bored piles / drilled holes",
+     "start": "2036-04-02",
+     "finish": "2036-04-06",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "wind_sensitivity": 1.0
+     }
+    },
+    {
+     "task": "Internal tiling / wet areas",
+     "start": "2035-06-13",
+     "finish": "2035-07-13",
+     "critical": false,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.436666666666667,
+      "adjusted_wet_probability": 0.502166666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.283849708333333,
+      "carryover_impact": 0.426841666666667,
+      "wind_impact": 0,
+      "combined_impact": 0.710691375,
+      "direct_allowance": 35534.56875,
+      "lost_wd": 0.710691375,
+      "cp_delay_wd": 0.710691375,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.505005561735261,
+      "adjusted_wet_probability": 0.58075639599555,
+      "wind_probability": 0,
+      "rain_impact": 0.00261340378197998,
+      "carryover_impact": 0.174226918798665,
+      "wind_impact": 0,
+      "combined_impact": 0.176840322580645,
+      "direct_allowance": 618.941129032258,
+      "lost_wd": 0.176840322580645,
+      "cp_delay_wd": 0.176840322580645,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 74,
+      "wet_probability": 0.523833455257259,
+      "adjusted_wet_probability": 0.602408473545848,
+      "wind_probability": 0,
+      "rain_impact": 0.243975431786069,
+      "carryover_impact": 0.0225903177579693,
+      "wind_impact": 0,
+      "combined_impact": 0.266565749544038,
+      "direct_allowance": 22213.8115734507,
+      "lost_wd": 19.7258654662588,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 6,
+      "wet_probability": 0.436666666666667,
+      "adjusted_wet_probability": 0.502166666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.00316365,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00316365,
+      "direct_allowance": 0,
+      "lost_wd": 0.0189819,
+      "cp_delay_wd": 0.0189819,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.436666666666667,
+      "adjusted_wet_probability": 0.502166666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.298789166666667,
+      "carryover_impact": 0.06402625,
+      "wind_impact": 0,
+      "combined_impact": 0.362815416666667,
+      "direct_allowance": 0,
+      "lost_wd": 0.725630833333333,
+      "cp_delay_wd": 0.725630833333333,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 18,
+      "wet_probability": 0.475162388936953,
+      "adjusted_wet_probability": 0.546436747277496,
+      "wind_probability": 0,
+      "rain_impact": 0.00344255150784823,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00344255150784823,
+      "direct_allowance": 8.60637876962057,
+      "lost_wd": 0.0619659271412681,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 139333.33,
+    "direct": 58375.9278312525,
+    "cp_delay_wd": 1.63214443091398,
+    "prelims": 1087.82426320417,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 0,
+    "total": 60698.2520944567
+   }
+  },
+  {
+   "station": "Chatham Islands",
+   "working_days_per_week": 6,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 0,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Scaffolding",
+     "start": "2036-10-05",
+     "finish": "2036-10-09",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "External painting / coatings",
+     "start": "2034-03-09",
+     "finish": "2034-03-13",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Decking",
+     "start": "2038-06-22",
+     "finish": "2038-07-22",
+     "critical": true,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 0.1,
+      "carryover": 0.75
+     }
+    },
+    {
+     "task": "Deck framing",
+     "start": "2028-06-20",
+     "finish": "2028-06-24",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 4,
+      "wet_probability": 0.344086021505376,
+      "adjusted_wet_probability": 0.344086021505376,
+      "wind_probability": 0,
+      "rain_impact": 0.0451612903225807,
+      "carryover_impact": 0.00344086021505376,
+      "wind_impact": 0,
+      "combined_impact": 0.0486021505376344,
+      "direct_allowance": 721.531488172043,
+      "lost_wd": 0.194408602150538,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.276497695852535,
+      "adjusted_wet_probability": 0.276497695852535,
+      "wind_probability": 0,
+      "rain_impact": 0.167453917050691,
+      "carryover_impact": 0.0117511520737327,
+      "wind_impact": 0,
+      "combined_impact": 0.179205069124424,
+      "direct_allowance": 2212.40664573733,
+      "lost_wd": 0.716820276497696,
+      "cp_delay_wd": 0.716820276497696,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 27,
+      "wet_probability": 0.500167264038232,
+      "adjusted_wet_probability": 0.500167264038232,
+      "wind_probability": 0,
+      "rain_impact": 0.0297599522102748,
+      "carryover_impact": 0.262587813620072,
+      "wind_impact": 0,
+      "combined_impact": 0.292347765830346,
+      "direct_allowance": 9744.92455318566,
+      "lost_wd": 7.89338967741935,
+      "cp_delay_wd": 7.89338967741935,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 5,
+      "wet_probability": 0.513333333333333,
+      "adjusted_wet_probability": 0.513333333333333,
+      "wind_probability": 0,
+      "rain_impact": 0.2079,
+      "carryover_impact": 0.01925,
+      "wind_impact": 0,
+      "combined_impact": 0.22715,
+      "direct_allowance": 227.15,
+      "lost_wd": 1.13575,
+      "cp_delay_wd": 1.13575,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 61524.67,
+    "direct": 12906.012687095,
+    "cp_delay_wd": 9.74595995391705,
+    "prelims": 0,
+    "weeks": 2,
+    "hire": 0,
+    "recovery": 0,
+    "total": 12906.012687095
+   }
+  },
+  {
+   "station": "Rotorua",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "External concrete finishing",
+     "start": "2039-07-06",
+     "finish": "2039-07-17",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Driven poles / posts",
+     "start": "2031-09-14",
+     "finish": "2032-09-28",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 8,
+      "wet_probability": 0.368186874304783,
+      "adjusted_wet_probability": 0.294549499443827,
+      "wind_probability": 0,
+      "rain_impact": 0.212075639599555,
+      "carryover_impact": 0.00530189098998888,
+      "wind_impact": 0,
+      "combined_impact": 0.217377530589544,
+      "direct_allowance": 9929.58821979978,
+      "lost_wd": 1.73902024471635,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 272,
+      "wet_probability": 0.326253924891078,
+      "adjusted_wet_probability": 0.261003139912862,
+      "wind_probability": 0,
+      "rain_impact": 0.119017431800265,
+      "carryover_impact": 0.0104401255965145,
+      "wind_impact": 0,
+      "combined_impact": 0.12945755739678,
+      "direct_allowance": 1598.2402826267,
+      "lost_wd": 35.2124556119241,
+      "cp_delay_wd": 35.2124556119241,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 58024.67,
+    "direct": 11527.8285024265,
+    "cp_delay_wd": 35.2124556119241,
+    "prelims": 20564.0740773637,
+    "weeks": 8,
+    "hire": 9876,
+    "recovery": 0,
+    "total": 41967.9025797902
+   }
+  },
+  {
+   "station": "Blenheim",
+   "working_days_per_week": 6,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Bored piles / drilled holes",
+     "start": "2039-06-06",
+     "finish": "2039-08-20",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Manholes / chambers",
+     "start": "2038-01-13",
+     "finish": "2038-02-12",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "wind_sensitivity": 0.75
+     }
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2030-05-24",
+     "finish": "2030-05-25",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "wind_loss": 0.1
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 66,
+      "wet_probability": 0.242802215705442,
+      "adjusted_wet_probability": 0.194241772564353,
+      "wind_probability": 0,
+      "rain_impact": 0.11557385467579,
+      "carryover_impact": 0.024765826001955,
+      "wind_impact": 0,
+      "combined_impact": 0.140339680677745,
+      "direct_allowance": 11694.9729220132,
+      "lost_wd": 9.26241892473118,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 27,
+      "wet_probability": 0.15165113124892,
+      "adjusted_wet_probability": 0.121320904999136,
+      "wind_probability": 0,
+      "rain_impact": 0.04913496652465,
+      "carryover_impact": 0.00727925429994815,
+      "wind_impact": 0,
+      "combined_impact": 0.0564142208245982,
+      "direct_allowance": 2820.71104122991,
+      "lost_wd": 1.52318396226415,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.225806451612903,
+      "adjusted_wet_probability": 0.180645161290323,
+      "wind_probability": 0,
+      "rain_impact": 0.102109677419355,
+      "carryover_impact": 0.00767741935483871,
+      "wind_impact": 0,
+      "combined_impact": 0.109787096774194,
+      "direct_allowance": 0,
+      "lost_wd": 0.219574193548387,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 133333.33,
+    "direct": 14515.6839632431,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 14515.6839632431
+   }
+  },
+  {
+   "station": "Nelson",
+   "working_days_per_week": 5,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 0,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Site establishment / temp fencing",
+     "start": "2032-12-03",
+     "finish": "2032-12-04",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall installation",
+     "start": "2029-09-25",
+     "finish": "2030-02-02",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall excavation",
+     "start": "2037-11-26",
+     "finish": "2037-11-30",
+     "critical": false,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Landscaping / topsoil / grassing",
+     "start": "2026-10-28",
+     "finish": "2026-11-08",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "carryover": 0.75,
+      "wind_loss": 0.1
+     }
+    },
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2032-03-16",
+     "finish": "2032-07-24",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.278494623655914,
+      "adjusted_wet_probability": 0.320268817204301,
+      "wind_probability": 0,
+      "rain_impact": 0.00896752688172043,
+      "carryover_impact": 0.00256215053763441,
+      "wind_impact": 0,
+      "combined_impact": 0.0115296774193548,
+      "direct_allowance": 384.322542212903,
+      "lost_wd": 0.0115296774193548,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 94,
+      "wet_probability": 0.260819486550048,
+      "adjusted_wet_probability": 0.299942409532555,
+      "wind_probability": 0,
+      "rain_impact": 0.089232866835935,
+      "carryover_impact": 0.0104979843336394,
+      "wind_impact": 0,
+      "combined_impact": 0.0997308511695745,
+      "direct_allowance": 249.327127923936,
+      "lost_wd": 9.37470000994,
+      "cp_delay_wd": 9.37470000994,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 3,
+      "wet_probability": 0.25,
+      "adjusted_wet_probability": 0.2875,
+      "wind_probability": 0,
+      "rain_impact": 0.162509375,
+      "carryover_impact": 0.03665625,
+      "wind_impact": 0,
+      "combined_impact": 0.199165625,
+      "direct_allowance": 10456.1953125,
+      "lost_wd": 0.597496875,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.263911290322581,
+      "adjusted_wet_probability": 0.303497983870968,
+      "wind_probability": 0,
+      "rain_impact": 0.0819444556451613,
+      "carryover_impact": 0.136574092741935,
+      "wind_impact": 0,
+      "combined_impact": 0.218518548387097,
+      "direct_allowance": 9981.70877177419,
+      "lost_wd": 1.74814838709677,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 94,
+      "wet_probability": 0.248140329286283,
+      "adjusted_wet_probability": 0.285361378679226,
+      "wind_probability": 0,
+      "rain_impact": 0.0654904364068824,
+      "carryover_impact": 0.00342433654415071,
+      "wind_impact": 0,
+      "combined_impact": 0.0689147729510331,
+      "direct_allowance": 241.201705328616,
+      "lost_wd": 6.47798865739711,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 137512.33,
+    "direct": 21312.7554597396,
+    "cp_delay_wd": 9.37470000994,
+    "prelims": 0,
+    "weeks": 2,
+    "hire": 0,
+    "recovery": 0,
+    "total": 21312.7554597396
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Manholes / chambers",
+     "start": "2030-01-16",
+     "finish": "2030-02-15",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "nonrecoverable": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 23,
+      "wet_probability": 0.224018734698384,
+      "adjusted_wet_probability": 0.179214987758707,
+      "wind_probability": 0.131249614085228,
+      "rain_impact": 0.096776093389702,
+      "carryover_impact": 0.0143371990206966,
+      "wind_impact": 0.00393748842255683,
+      "combined_impact": 0.115050780832955,
+      "direct_allowance": 3835.02564426258,
+      "lost_wd": 2.64616795915797,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 33333.33,
+    "direct": 3835.02564426258,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 3835.02564426258
+   }
+  },
+  {
+   "station": "Hamilton",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Internal flooring",
+     "start": "2025-04-27",
+     "finish": "2025-04-28",
+     "critical": true,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.317777777777778,
+      "adjusted_wet_probability": 0.317777777777778,
+      "wind_probability": 0,
+      "rain_impact": 0.000794444444444445,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000794444444444445,
+      "direct_allowance": 41.7083333333333,
+      "lost_wd": 0.000794444444444445,
+      "cp_delay_wd": 0.000794444444444445,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 52500,
+    "direct": 41.7083333333333,
+    "cp_delay_wd": 0.000794444444444445,
+    "prelims": 0.463955555555556,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 0,
+    "total": 337.172288888889
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 7,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2038-11-26",
+     "finish": "2039-12-11",
+     "critical": true,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Decking",
+     "start": "2034-08-14",
+     "finish": "2034-08-15",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "wind_sensitivity": 0.75
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 381,
+      "wet_probability": 0.353839229224589,
+      "adjusted_wet_probability": 0.406915113608277,
+      "wind_probability": 0.150798823610226,
+      "rain_impact": 0.292978881797959,
+      "carryover_impact": 0.0915559005618623,
+      "wind_impact": 0.0162862729499044,
+      "combined_impact": 0.400821055309726,
+      "direct_allowance": 21043.1054037606,
+      "lost_wd": 152.712822073006,
+      "cp_delay_wd": 152.712822073006,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.472747497219132,
+      "adjusted_wet_probability": 0.543659621802002,
+      "wind_probability": 0.137395459976105,
+      "rain_impact": 0.177912611234705,
+      "carryover_impact": 0.0152224694104561,
+      "wind_impact": 0.0396729390681004,
+      "combined_impact": 0.232808019713262,
+      "direct_allowance": 232.808019713262,
+      "lost_wd": 0.465616039426523,
+      "cp_delay_wd": 0.465616039426523,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 53500,
+    "direct": 21275.9134234739,
+    "cp_delay_wd": 153.178438112432,
+    "prelims": 0,
+    "weeks": 22,
+    "hire": 6490,
+    "recovery": 0,
+    "total": 27765.9134234739
+   }
+  },
+  {
+   "station": "Whangarei",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Asphalt / sealing",
+     "start": "2031-04-01",
+     "finish": "2031-04-05",
+     "critical": false,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {
+      "rain_exposure": 0.75
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 4,
+      "wet_probability": 0.323456790123457,
+      "adjusted_wet_probability": 0.323456790123457,
+      "wind_probability": 0,
+      "rain_impact": 0.185583333333333,
+      "carryover_impact": 0.0145555555555556,
+      "wind_impact": 0,
+      "combined_impact": 0.200138888888889,
+      "direct_allowance": 10507.2916666667,
+      "lost_wd": 0.800555555555556,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 52500,
+    "direct": 10507.2916666667,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 1500,
+    "total": 12007.2916666667
+   }
+  },
+  {
+   "station": "Hamilton",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Internal framing",
+     "start": "2028-05-25",
+     "finish": "2028-06-24",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Scaffolding",
+     "start": "2031-05-12",
+     "finish": "2031-06-11",
+     "critical": true,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Steel erection / crane lifts",
+     "start": "2035-04-06",
+     "finish": "2035-04-06",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall installation",
+     "start": "2028-02-01",
+     "finish": "2028-02-05",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "wind_loss": 0.75
+     }
+    },
+    {
+     "task": "Internal linings / plasterboard",
+     "start": "2035-09-14",
+     "finish": "2035-09-25",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 22,
+      "wet_probability": 0.396102965135223,
+      "adjusted_wet_probability": 0.316882372108179,
+      "wind_probability": 0,
+      "rain_impact": 0.0014259706744868,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.0014259706744868,
+      "direct_allowance": 1.4259706744868,
+      "lost_wd": 0.0313713548387097,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 23,
+      "wet_probability": 0.380508025557114,
+      "adjusted_wet_probability": 0.304406420445691,
+      "wind_probability": 0,
+      "rain_impact": 0.039953342683497,
+      "carryover_impact": 0.00304406420445691,
+      "wind_impact": 0,
+      "combined_impact": 0.0429974068879539,
+      "direct_allowance": 2149.87034439769,
+      "lost_wd": 0.988940358422939,
+      "cp_delay_wd": 0.988940358422939,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.317777777777778,
+      "adjusted_wet_probability": 0.254222222222222,
+      "wind_probability": 0,
+      "rain_impact": 0.135246222222222,
+      "carryover_impact": 0.00406755555555556,
+      "wind_impact": 0,
+      "combined_impact": 0.139313777777778,
+      "direct_allowance": 6363.71405511111,
+      "lost_wd": 0.139313777777778,
+      "cp_delay_wd": 0.139313777777778,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.204683288409703,
+      "adjusted_wet_probability": 0.163746630727763,
+      "wind_probability": 0,
+      "rain_impact": 0.0487146226415094,
+      "carryover_impact": 0.0057311320754717,
+      "wind_impact": 0,
+      "combined_impact": 0.0544457547169811,
+      "direct_allowance": 190.560141509434,
+      "lost_wd": 0.217783018867925,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.426666666666667,
+      "adjusted_wet_probability": 0.341333333333333,
+      "wind_probability": 0,
+      "rain_impact": 0.000682666666666667,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000682666666666667,
+      "direct_allowance": 31.1835306666667,
+      "lost_wd": 0.00546133333333333,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 145858,
+    "direct": 8736.75404235939,
+    "cp_delay_wd": 1.12825413620072,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 0,
+    "total": 9971.25404235939
+   }
+  },
+  {
+   "station": "Auckland",
+   "working_days_per_week": 4,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Erosion & sediment controls",
+     "start": "2028-04-06",
+     "finish": "2028-04-10",
+     "critical": false,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Drainage trenching",
+     "start": "2033-10-24",
+     "finish": "2033-11-23",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 1.0
+     }
+    },
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2028-04-29",
+     "finish": "2028-05-03",
+     "critical": true,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal framing",
+     "start": "2032-05-23",
+     "finish": "2032-06-22",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 2,
+      "wet_probability": 0.320238095238095,
+      "adjusted_wet_probability": 0.36827380952381,
+      "wind_probability": 0.117283950617284,
+      "rain_impact": 0.109561458333333,
+      "carryover_impact": 0.0206233333333333,
+      "wind_impact": 0.00820987654320988,
+      "combined_impact": 0.138394668209877,
+      "direct_allowance": 345.986670524691,
+      "lost_wd": 0.276789336419753,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 19,
+      "wet_probability": 0.327166033362977,
+      "adjusted_wet_probability": 0.376240938367424,
+      "wind_probability": 0.220335785700811,
+      "rain_impact": 0.285943113159242,
+      "carryover_impact": 0.0451489126040909,
+      "wind_impact": 0.0114574608564422,
+      "combined_impact": 0.342549486619775,
+      "direct_allowance": 15647.3179993047,
+      "lost_wd": 6.50844024577573,
+      "cp_delay_wd": 6.50844024577573,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 3,
+      "wet_probability": 0.419354838709677,
+      "adjusted_wet_probability": 0.482258064516129,
+      "wind_probability": 0.113500597371565,
+      "rain_impact": 0.110678225806452,
+      "carryover_impact": 0.00578709677419355,
+      "wind_impact": 0.00612903225806452,
+      "combined_impact": 0.12259435483871,
+      "direct_allowance": 0,
+      "lost_wd": 0.367783064516129,
+      "cp_delay_wd": 0.367783064516129,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 18,
+      "wet_probability": 0.459543010752688,
+      "adjusted_wet_probability": 0.528474462365591,
+      "wind_probability": 0.134065666622417,
+      "rain_impact": 0.00237813508064516,
+      "carryover_impact": 0,
+      "wind_impact": 0.000201098499933625,
+      "combined_impact": 0.00257923358057879,
+      "direct_allowance": 31.8423666387441,
+      "lost_wd": 0.0464262044504182,
+      "cp_delay_wd": 0.0464262044504182,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 60524.67,
+    "direct": 16025.1470364682,
+    "cp_delay_wd": 6.92264951474228,
+    "prelims": 0,
+    "weeks": 2,
+    "hire": 2469,
+    "recovery": 0,
+    "total": 18494.1470364682
+   }
+  },
+  {
+   "station": "Taupo",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": 0.1,
+   "daily_prelims": 584,
+   "weekly_hire": 295,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "External concrete finishing",
+     "start": "2033-03-03",
+     "finish": "2033-07-11",
+     "critical": false,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "External block / brick laying",
+     "start": "2036-03-14",
+     "finish": "2036-04-13",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2032-03-19",
+     "finish": "2033-04-03",
+     "critical": false,
+     "labour": 1000,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 93,
+      "wet_probability": 0.291148375401847,
+      "adjusted_wet_probability": 0.232918700321478,
+      "wind_probability": 0.1,
+      "rain_impact": 0.167701464231464,
+      "carryover_impact": 0.0041925366057866,
+      "wind_impact": 0.0036,
+      "combined_impact": 0.17549400083725,
+      "direct_allowance": 438.735002093126,
+      "lost_wd": 16.3209420778643,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 21,
+      "wet_probability": 0.248116955347211,
+      "adjusted_wet_probability": 0.198493564277769,
+      "wind_probability": 0.1,
+      "rain_impact": 0.0649570189098999,
+      "carryover_impact": 0.00694727474972191,
+      "wind_impact": 0.00385,
+      "combined_impact": 0.0757542936596218,
+      "direct_allowance": 75.7542936596218,
+      "lost_wd": 1.59084016685206,
+      "cp_delay_wd": 1.59084016685206,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 271,
+      "wet_probability": 0.298440805099805,
+      "adjusted_wet_probability": 0.238752644079844,
+      "wind_probability": 0.1,
+      "rain_impact": 0.134954932066132,
+      "carryover_impact": 0.0101469873733934,
+      "wind_impact": 0.00595,
+      "combined_impact": 0.151051919439525,
+      "direct_allowance": 5186.11539725063,
+      "lost_wd": 40.9350701681113,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 37833.33,
+    "direct": 5700.60469300338,
+    "cp_delay_wd": 1.59084016685206,
+    "prelims": 929.050657441602,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 1500,
+    "total": 8424.65535044498
+   }
+  },
+  {
+   "station": "Kaitaia",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 0,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Internal flooring",
+     "start": "2032-02-29",
+     "finish": "2032-03-30",
+     "critical": false,
+     "labour": 1000,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 22,
+      "wet_probability": 0.244868035190616,
+      "adjusted_wet_probability": 0.244868035190616,
+      "wind_probability": 0,
+      "rain_impact": 0.00061217008797654,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00061217008797654,
+      "direct_allowance": 21.0178376466276,
+      "lost_wd": 0.0134677419354839,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 34333.33,
+    "direct": 21.0178376466276,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 1500,
+    "total": 1521.01783764663
+   }
+  },
+  {
+   "station": "Kaikoura",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 666.5,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2036-12-18",
+     "finish": "2036-12-18",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "rain_exposure": 1.0
+     }
+    },
+    {
+     "task": "External painting / coatings",
+     "start": "2026-09-09",
+     "finish": "2026-10-09",
+     "critical": true,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_loss": 0.75
+     }
+    },
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2028-12-16",
+     "finish": "2029-01-15",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Internal painting",
+     "start": "2035-08-11",
+     "finish": "2035-09-10",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "External concrete finishing",
+     "start": "2028-03-29",
+     "finish": "2028-03-30",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Decking",
+     "start": "2028-08-07",
+     "finish": "2028-08-18",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.234169653524492,
+      "adjusted_wet_probability": 0.234169653524492,
+      "wind_probability": 0,
+      "rain_impact": 0.168602150537634,
+      "carryover_impact": 0.0526881720430108,
+      "wind_impact": 0,
+      "combined_impact": 0.221290322580645,
+      "direct_allowance": 11064.5161290323,
+      "lost_wd": 0.221290322580645,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 23,
+      "wet_probability": 0.227994246604296,
+      "adjusted_wet_probability": 0.227994246604296,
+      "wind_probability": 0,
+      "rain_impact": 0.138079015599727,
+      "carryover_impact": 0.0096897554806826,
+      "wind_impact": 0,
+      "combined_impact": 0.14776877108041,
+      "direct_allowance": 4925.62521011775,
+      "lost_wd": 3.39868173484942,
+      "cp_delay_wd": 3.39868173484942,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 21,
+      "wet_probability": 0.222279114752233,
+      "adjusted_wet_probability": 0.222279114752233,
+      "wind_probability": 0,
+      "rain_impact": 0.160040962621608,
+      "carryover_impact": 0.0500128008192524,
+      "wind_impact": 0,
+      "combined_impact": 0.21005376344086,
+      "direct_allowance": 735.188172043011,
+      "lost_wd": 4.41112903225807,
+      "cp_delay_wd": 4.41112903225807,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 21,
+      "wet_probability": 0.215223263944065,
+      "adjusted_wet_probability": 0.215223263944065,
+      "wind_probability": 0,
+      "rain_impact": 0.000774803750198634,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000774803750198634,
+      "direct_allowance": 11.5024807902113,
+      "lost_wd": 0.0162708787541713,
+      "cp_delay_wd": 0.0162708787541713,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 2,
+      "wet_probability": 0.212458286985539,
+      "adjusted_wet_probability": 0.212458286985539,
+      "wind_probability": 0,
+      "rain_impact": 0.152969966629588,
+      "carryover_impact": 0.00382424916573971,
+      "wind_impact": 0,
+      "combined_impact": 0.156794215795328,
+      "direct_allowance": 7839.71078976641,
+      "lost_wd": 0.313588431590656,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 10,
+      "wet_probability": 0.21579532814238,
+      "adjusted_wet_probability": 0.21579532814238,
+      "wind_probability": 0,
+      "rain_impact": 0.070619021134594,
+      "carryover_impact": 0.00604226918798665,
+      "wind_impact": 0,
+      "combined_impact": 0.0766612903225807,
+      "direct_allowance": 2555.37608854839,
+      "lost_wd": 0.766612903225806,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 185012.33,
+    "direct": 27131.918870298,
+    "cp_delay_wd": 7.82608164586166,
+    "prelims": 5216.0834169668,
+    "weeks": 2,
+    "hire": 590,
+    "recovery": 0,
+    "total": 32938.0022872648
+   }
+  },
+  {
+   "station": "Wellington",
+   "working_days_per_week": 7,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "External block / brick laying",
+     "start": "2037-03-30",
+     "finish": "2037-08-07",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "nonrecoverable": 1.0
+     }
+    },
+    {
+     "task": "Drainage trenching",
+     "start": "2037-05-01",
+     "finish": "2037-09-08",
+     "critical": true,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {
+      "wind_sensitivity": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 131,
+      "wet_probability": 0.406192812491428,
+      "adjusted_wet_probability": 0.324954249993142,
+      "wind_probability": 0,
+      "rain_impact": 0.151916111871794,
+      "carryover_impact": 0.0162477124996571,
+      "wind_impact": 0,
+      "combined_impact": 0.168163824371451,
+      "direct_allowance": 0,
+      "lost_wd": 22.0294609926601,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 131,
+      "wet_probability": 0.419046693839015,
+      "adjusted_wet_probability": 0.335237355071212,
+      "wind_probability": 0,
+      "rain_impact": 0.165607253405179,
+      "carryover_impact": 0.0402284826085455,
+      "wind_impact": 0,
+      "combined_impact": 0.205835736013724,
+      "direct_allowance": 17152.9773150246,
+      "lost_wd": 26.9644814177979,
+      "cp_delay_wd": 26.9644814177979,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 83333.33,
+    "direct": 17152.9773150246,
+    "cp_delay_wd": 26.9644814177979,
+    "prelims": 15747.257147994,
+    "weeks": 4,
+    "hire": 4938,
+    "recovery": 0,
+    "total": 37838.2344630185
+   }
+  },
+  {
+   "station": "Kaitaia",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Kerb & channel",
+     "start": "2037-11-09",
+     "finish": "2037-11-20",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "wind_loss": 0.5
+     }
+    },
+    {
+     "task": "Landscaping / topsoil / grassing",
+     "start": "2027-06-03",
+     "finish": "2027-10-11",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal painting",
+     "start": "2031-03-23",
+     "finish": "2031-03-27",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "rain_loss": 1.0
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 8,
+      "wet_probability": 0.307575757575758,
+      "adjusted_wet_probability": 0.307575757575758,
+      "wind_probability": 0,
+      "rain_impact": 0.173857196969697,
+      "carryover_impact": 0.0130719696969697,
+      "wind_impact": 0,
+      "combined_impact": 0.186929166666667,
+      "direct_allowance": 0,
+      "lost_wd": 1.49543333333333,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 74,
+      "wet_probability": 0.471147393728039,
+      "adjusted_wet_probability": 0.471147393728039,
+      "wind_probability": 0,
+      "rain_impact": 0.12720979630657,
+      "carryover_impact": 0.0339226123484188,
+      "wind_impact": 0,
+      "combined_impact": 0.161132408654989,
+      "direct_allowance": 161.132408654989,
+      "lost_wd": 11.9237982404692,
+      "cp_delay_wd": 11.9237982404692,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.244868035190616,
+      "adjusted_wet_probability": 0.244868035190616,
+      "wind_probability": 0,
+      "rain_impact": 0.00734604105571848,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00734604105571848,
+      "direct_allowance": 7.34604105571848,
+      "lost_wd": 0.0293841642228739,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 2000,
+    "direct": 168.478449710708,
+    "cp_delay_wd": 11.9237982404692,
+    "prelims": 6963.49817243402,
+    "weeks": 3,
+    "hire": 3703.5,
+    "recovery": 0,
+    "total": 10835.4766221447
+   }
+  },
+  {
+   "station": "Kaikoura",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2025-08-13",
+     "finish": "2025-08-24",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "External painting / coatings",
+     "start": "2038-04-16",
+     "finish": "2039-05-01",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "External painting / coatings",
+     "start": "2037-10-26",
+     "finish": "2038-01-09",
+     "critical": true,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {
+      "rain_loss": 0.75,
+      "rain_exposure": 0.5
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 6,
+      "wet_probability": 0.21579532814238,
+      "adjusted_wet_probability": 0.21579532814238,
+      "wind_probability": 0,
+      "rain_impact": 0.155372636262514,
+      "carryover_impact": 0.0971078976640712,
+      "wind_impact": 0,
+      "combined_impact": 0.252480533926585,
+      "direct_allowance": 12624.0266963293,
+      "lost_wd": 1.51488320355951,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 216,
+      "wet_probability": 0.229189001961199,
+      "adjusted_wet_probability": 0.229189001961199,
+      "wind_probability": 0,
+      "rain_impact": 0.138802589312751,
+      "carryover_impact": 0.00974053258335094,
+      "wind_impact": 0,
+      "combined_impact": 0.148543121896102,
+      "direct_allowance": 519.900926636356,
+      "lost_wd": 32.085314329558,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 44,
+      "wet_probability": 0.233695376706129,
+      "adjusted_wet_probability": 0.233695376706129,
+      "wind_probability": 0,
+      "rain_impact": 0.0744904013250787,
+      "carryover_impact": 0.0099320535100105,
+      "wind_impact": 0,
+      "combined_impact": 0.0844224548350892,
+      "direct_allowance": 4432.17887884219,
+      "lost_wd": 3.71458801274393,
+      "cp_delay_wd": 3.71458801274393,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 106000,
+    "direct": 17576.1065018078,
+    "cp_delay_wd": 3.71458801274393,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 1500,
+    "total": 20310.6065018078
+   }
+  },
+  {
+   "station": "Wellington",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": 0.1,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Cladding",
+     "start": "2027-09-20",
+     "finish": "2027-09-20",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {
+      "wind_sensitivity": 0.1,
+      "nonrecoverable": 1.0
+     }
+    },
+    {
+     "task": "Retaining wall excavation",
+     "start": "2037-12-21",
+     "finish": "2039-01-05",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "Internal painting",
+     "start": "2030-10-06",
+     "finish": "2031-02-13",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {
+      "carryover": 0.75
+     }
+    },
+    {
+     "task": "Asphalt / sealing",
+     "start": "2034-06-13",
+     "finish": "2034-06-24",
+     "critical": false,
+     "labour": 0,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal linings / plasterboard",
+     "start": "2034-08-28",
+     "finish": "2034-11-11",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {
+      "wind_loss": 0.1
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 1,
+      "wet_probability": 0.362745098039216,
+      "adjusted_wet_probability": 0.290196078431373,
+      "wind_probability": 0.1,
+      "rain_impact": 0.104470588235294,
+      "carryover_impact": 0.00580392156862745,
+      "wind_impact": 0.0045,
+      "combined_impact": 0.114774509803922,
+      "direct_allowance": 286.936274509804,
+      "lost_wd": 0.114774509803922,
+      "cp_delay_wd": 0.114774509803922,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 273,
+      "wet_probability": 0.348523960974084,
+      "adjusted_wet_probability": 0.278819168779267,
+      "wind_probability": 0.1,
+      "rain_impact": 0.157602535152481,
+      "carryover_impact": 0.118498146731189,
+      "wind_impact": 0.00595,
+      "combined_impact": 0.282050681883669,
+      "direct_allowance": 23504.2225501368,
+      "lost_wd": 76.9998361542417,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 94,
+      "wet_probability": 0.305253657196585,
+      "adjusted_wet_probability": 0.244202925757268,
+      "wind_probability": 0.1,
+      "rain_impact": 0.000879130532726163,
+      "carryover_impact": 0.0549456582953852,
+      "wind_impact": 7.2e-05,
+      "combined_impact": 0.0558967888281114,
+      "direct_allowance": 0,
+      "lost_wd": 5.25429814984247,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 9,
+      "wet_probability": 0.447916666666667,
+      "adjusted_wet_probability": 0.358333333333333,
+      "wind_probability": 0.1,
+      "rain_impact": 0.274125,
+      "carryover_impact": 0.016125,
+      "wind_impact": 0.003825,
+      "combined_impact": 0.294075,
+      "direct_allowance": 0,
+      "lost_wd": 2.646675,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 55,
+      "wet_probability": 0.374425034168867,
+      "adjusted_wet_probability": 0.299540027335094,
+      "wind_probability": 0.1,
+      "rain_impact": 0.000599080054670187,
+      "carryover_impact": 0,
+      "wind_impact": 5e-05,
+      "combined_impact": 0.000649080054670187,
+      "direct_allowance": 1.62270013667547,
+      "lost_wd": 0.0356994030068603,
+      "cp_delay_wd": 0.0356994030068603,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 88333.33,
+    "direct": 23792.7815247833,
+    "cp_delay_wd": 0.150473912810782,
+    "prelims": 87.8767650814966,
+    "weeks": 1,
+    "hire": 1234.5,
+    "recovery": 0,
+    "total": 25115.1582898648
+   }
+  },
+  {
+   "station": "Alexandra",
+   "working_days_per_week": 7,
+   "local_factor": 1.15,
+   "wind_override": 0.1,
+   "daily_prelims": 666.5,
+   "weekly_hire": 0,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Fitout / cabinetry / joinery",
+     "start": "2028-06-18",
+     "finish": "2029-07-03",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "carryover": 0.75,
+      "rain_exposure": 1.0
+     }
+    },
+    {
+     "task": "Internal painting",
+     "start": "2034-12-14",
+     "finish": "2035-04-23",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {
+      "rain_exposure": 0.5
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 381,
+      "wet_probability": 0.181119567974658,
+      "adjusted_wet_probability": 0.208287503170857,
+      "wind_probability": 0.1,
+      "rain_impact": 0.00416575006341714,
+      "carryover_impact": 0.0390539068445357,
+      "wind_impact": 4e-05,
+      "combined_impact": 0.0432596569079528,
+      "direct_allowance": 43.2596569079528,
+      "lost_wd": 16.48192928193,
+      "cp_delay_wd": 16.48192928193,
+      "status": "AMBER - local factor requires basis"
+     },
+     {
+      "workdays": 131,
+      "wet_probability": 0.183706642753792,
+      "adjusted_wet_probability": 0.21126263916686,
+      "wind_probability": 0.1,
+      "rain_impact": 0.00380272750500349,
+      "carryover_impact": 0,
+      "wind_impact": 7.2e-05,
+      "combined_impact": 0.00387472750500349,
+      "direct_allowance": 322.893945834532,
+      "lost_wd": 0.507589303155457,
+      "cp_delay_wd": 0,
+      "status": "AMBER - local factor requires basis"
+     }
+    ],
+    "exposed_pool": 84333.33,
+    "direct": 366.153602742485,
+    "cp_delay_wd": 16.48192928193,
+    "prelims": 10985.2058664064,
+    "weeks": 3,
+    "hire": 0,
+    "recovery": 1500,
+    "total": 12851.3594691488
+   }
+  },
+  {
+   "station": "Hamilton",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2033-01-04",
+     "finish": "2034-01-19",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2035-07-16",
+     "finish": "2036-07-30",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "rain_loss": 0.5
+     }
+    },
+    {
+     "task": "Cladding",
+     "start": "2034-03-16",
+     "finish": "2035-03-31",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal framing",
+     "start": "2025-10-26",
+     "finish": "2025-10-26",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Internal flooring",
+     "start": "2026-03-01",
+     "finish": "2026-03-05",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Building platform / pad prep",
+     "start": "2034-08-17",
+     "finish": "2034-08-18",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "nonrecoverable": 0.75,
+      "rain_exposure": 0.1
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 219,
+      "wet_probability": 0.32169452661805,
+      "adjusted_wet_probability": 0.32169452661805,
+      "wind_probability": 0,
+      "rain_impact": 0.231620059164996,
+      "carryover_impact": 0.0723812684890613,
+      "wind_impact": 0,
+      "combined_impact": 0.304001327654057,
+      "direct_allowance": 4513.10338991401,
+      "lost_wd": 66.5762907562386,
+      "cp_delay_wd": 66.5762907562386,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 219,
+      "wet_probability": 0.330790426381206,
+      "adjusted_wet_probability": 0.330790426381206,
+      "wind_probability": 0,
+      "rain_impact": 0.133556634651412,
+      "carryover_impact": 0.0140585931212012,
+      "wind_impact": 0,
+      "combined_impact": 0.147615227772613,
+      "direct_allowance": 147.615227772613,
+      "lost_wd": 32.3277348822023,
+      "cp_delay_wd": 32.3277348822023,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 217,
+      "wet_probability": 0.322207600728234,
+      "adjusted_wet_probability": 0.322207600728234,
+      "wind_probability": 0,
+      "rain_impact": 0.0695968417572986,
+      "carryover_impact": 0.00386649120873881,
+      "wind_impact": 0,
+      "combined_impact": 0.0734633329660374,
+      "direct_allowance": 73.4633329660374,
+      "lost_wd": 15.9415432536301,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": "#VALUE!",
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.19815668202765,
+      "adjusted_wet_probability": 0.19815668202765,
+      "wind_probability": 0,
+      "rain_impact": 0.000495391705069125,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000495391705069125,
+      "direct_allowance": 24.7695852534562,
+      "lost_wd": 0.0019815668202765,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 1,
+      "wet_probability": 0.445161290322581,
+      "adjusted_wet_probability": 0.445161290322581,
+      "wind_probability": 0,
+      "rain_impact": 0.0250403225806452,
+      "carryover_impact": 0.0667741935483871,
+      "wind_impact": 0,
+      "combined_impact": 0.0918145161290323,
+      "direct_allowance": 321.350806451613,
+      "lost_wd": 0.0918145161290323,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 82691.34,
+    "direct": "#VALUE!",
+    "cp_delay_wd": "#VALUE!",
+    "prelims": "#VALUE!",
+    "weeks": "#VALUE!",
+    "hire": "#VALUE!",
+    "recovery": 1500,
+    "total": "#VALUE!"
+   }
+  },
+  {
+   "station": "Masterton",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 0,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Detailed earthworks / trim subgrade",
+     "start": "2036-09-18",
+     "finish": "2036-12-02",
+     "critical": false,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Wall framing (open structure)",
+     "start": "2032-09-25",
+     "finish": "2033-10-10",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {}
+    },
+    {
+     "task": "Internal linings / plasterboard",
+     "start": "2033-07-22",
+     "finish": "2033-10-05",
+     "critical": true,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "carryover": 0.75,
+      "nonrecoverable": 0.5
+     }
+    },
+    {
+     "task": "Bulk earthworks",
+     "start": "2027-09-21",
+     "finish": "2028-01-29",
+     "critical": false,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "External concrete finishing",
+     "start": "2025-02-20",
+     "finish": "2025-02-24",
+     "critical": true,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "wind_loss": 0.75,
+      "carryover": 0.5
+     }
+    },
+    {
+     "task": "Retaining wall excavation",
+     "start": "2034-04-05",
+     "finish": "2034-04-16",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 54,
+      "wet_probability": 0.298173491184244,
+      "adjusted_wet_probability": 0.298173491184244,
+      "wind_probability": 0,
+      "rain_impact": 0.214684913652656,
+      "carryover_impact": 0.0670890355164549,
+      "wind_impact": 0,
+      "combined_impact": 0.28177394916911,
+      "direct_allowance": 704.434872922776,
+      "lost_wd": 15.215793255132,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 271,
+      "wet_probability": 0.282546262938422,
+      "adjusted_wet_probability": 0.282546262938422,
+      "wind_probability": 0,
+      "rain_impact": 0.0648443673443679,
+      "carryover_impact": 0.00339055515526106,
+      "wind_impact": 0,
+      "combined_impact": 0.0682349224996289,
+      "direct_allowance": 1012.99314190507,
+      "lost_wd": 18.4916639973994,
+      "cp_delay_wd": 18.4916639973994,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 54,
+      "wet_probability": 0.36231581043409,
+      "adjusted_wet_probability": 0.36231581043409,
+      "wind_probability": 0,
+      "rain_impact": 0.00144926324173636,
+      "carryover_impact": 0.135868428912784,
+      "wind_impact": 0,
+      "combined_impact": 0.13731769215452,
+      "direct_allowance": 480.61192254082,
+      "lost_wd": 7.41515537634409,
+      "cp_delay_wd": 7.41515537634409,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 94,
+      "wet_probability": 0.252672573365779,
+      "adjusted_wet_probability": 0.252672573365779,
+      "wind_probability": 0,
+      "rain_impact": 0.150340181152638,
+      "carryover_impact": 0.0429543374721824,
+      "wind_impact": 0,
+      "combined_impact": 0.193294518624821,
+      "direct_allowance": 9664.72593124103,
+      "lost_wd": 18.1696847507331,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 3,
+      "wet_probability": 0.167238421955403,
+      "adjusted_wet_probability": 0.167238421955403,
+      "wind_probability": 0,
+      "rain_impact": 0.12041166380789,
+      "carryover_impact": 0.0752572898799314,
+      "wind_impact": 0,
+      "combined_impact": 0.195668953687822,
+      "direct_allowance": 9783.44768439108,
+      "lost_wd": 0.587006861063465,
+      "cp_delay_wd": 0.587006861063465,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.284848484848485,
+      "adjusted_wet_probability": 0.284848484848485,
+      "wind_probability": 0,
+      "rain_impact": 0.161010606060606,
+      "carryover_impact": 0.0363181818181818,
+      "wind_impact": 0,
+      "combined_impact": 0.197328787878788,
+      "direct_allowance": 9013.78170151515,
+      "lost_wd": 1.5786303030303,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 166524.67,
+    "direct": 30659.9952545159,
+    "cp_delay_wd": 26.493826234807,
+    "prelims": 15472.3945211273,
+    "weeks": 6,
+    "hire": 0,
+    "recovery": 1500,
+    "total": 47632.3897756432
+   }
+  },
+  {
+   "station": "Whanganui",
+   "working_days_per_week": 5,
+   "local_factor": 1.15,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 1234.5,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Erosion & sediment controls",
+     "start": "2030-07-24",
+     "finish": "2030-10-07",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "carryover": 1.0,
+      "nonrecoverable": 1.0
+     }
+    },
+    {
+     "task": "Internal flooring",
+     "start": "2027-09-09",
+     "finish": "2028-09-23",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall excavation",
+     "start": "2030-10-03",
+     "finish": "2031-10-18",
+     "critical": true,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {
+      "carryover": 1.0
+     }
+    },
+    {
+     "task": "Bulk earthworks",
+     "start": "2032-01-24",
+     "finish": "2032-04-08",
+     "critical": true,
+     "labour": 50000,
+     "plant": 0,
+     "overrides": {
+      "carryover": 1.0
+     }
+    },
+    {
+     "task": "Roofing",
+     "start": "2035-09-07",
+     "finish": "2035-09-11",
+     "critical": true,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Exterior windows / joinery",
+     "start": "2033-05-11",
+     "finish": "2033-05-22",
+     "critical": true,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {
+      "wind_loss": 0.75,
+      "rain_exposure": 0.1
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 54,
+      "wet_probability": 0.36689565909996,
+      "adjusted_wet_probability": 0.421930007964954,
+      "wind_probability": 0,
+      "rain_impact": 0.179320253385106,
+      "carryover_impact": 0.421930007964954,
+      "wind_impact": 0,
+      "combined_impact": 0.60125026135006,
+      "direct_allowance": 20041.6733741678,
+      "lost_wd": 32.4675141129032,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 272,
+      "wet_probability": 0.313467769520395,
+      "adjusted_wet_probability": 0.360487934948454,
+      "wind_probability": 0,
+      "rain_impact": 0.000901219837371134,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000901219837371134,
+      "direct_allowance": 0.901219837371134,
+      "lost_wd": 0.245131795764949,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 272,
+      "wet_probability": 0.312750915837403,
+      "adjusted_wet_probability": 0.359663553213014,
+      "wind_probability": 0,
+      "rain_impact": 0.203299823453656,
+      "carryover_impact": 0.305714020231062,
+      "wind_impact": 0,
+      "combined_impact": 0.509013843684718,
+      "direct_allowance": 16967.1264261111,
+      "lost_wd": 138.451765482243,
+      "cp_delay_wd": 138.451765482243,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 54,
+      "wet_probability": 0.239047829849804,
+      "adjusted_wet_probability": 0.274905004327275,
+      "wind_probability": 0,
+      "rain_impact": 0.163568477574728,
+      "carryover_impact": 0.233669253678183,
+      "wind_impact": 0,
+      "combined_impact": 0.397237731252912,
+      "direct_allowance": 19861.8865626456,
+      "lost_wd": 21.4508374876572,
+      "cp_delay_wd": 21.4508374876572,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 3,
+      "wet_probability": 0.35,
+      "adjusted_wet_probability": 0.4025,
+      "wind_probability": 0,
+      "rain_impact": 0.25659375,
+      "carryover_impact": 0.0068425,
+      "wind_impact": 0,
+      "combined_impact": 0.26343625,
+      "direct_allowance": 21953.0199552125,
+      "lost_wd": 0.79030875,
+      "cp_delay_wd": 0.79030875,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.32258064516129,
+      "adjusted_wet_probability": 0.370967741935484,
+      "wind_probability": 0,
+      "rain_impact": 0.00816129032258065,
+      "carryover_impact": 0.00204032258064516,
+      "wind_impact": 0,
+      "combined_impact": 0.0102016129032258,
+      "direct_allowance": 465.999475806452,
+      "lost_wd": 0.0816129032258065,
+      "cp_delay_wd": 0.0816129032258065,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 246678.99,
+    "direct": 79290.6070137808,
+    "cp_delay_wd": 160.774524623126,
+    "prelims": 0,
+    "weeks": 33,
+    "hire": 40738.5,
+    "recovery": 1500,
+    "total": 121529.107013781
+   }
+  },
+  {
+   "station": "Milford Sound",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 0,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "Workshop fabrication / sheltered prep",
+     "start": "2038-08-11",
+     "finish": "2038-08-15",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Subbase / pavement prep",
+     "start": "2037-05-13",
+     "finish": "2037-09-20",
+     "critical": false,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {
+      "rain_exposure": 0.75
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 3,
+      "wet_probability": 0.516129032258065,
+      "adjusted_wet_probability": 0.516129032258065,
+      "wind_probability": 0,
+      "rain_impact": 0.000825806451612903,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000825806451612903,
+      "direct_allowance": 68.8172015483871,
+      "lost_wd": 0.00247741935483871,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 93,
+      "wet_probability": 0.504533848842269,
+      "adjusted_wet_probability": 0.504533848842269,
+      "wind_probability": 0,
+      "rain_impact": 0.225148230045863,
+      "carryover_impact": 0.0857707543031858,
+      "wind_impact": 0,
+      "combined_impact": 0.310918984349049,
+      "direct_allowance": 16323.246678325,
+      "lost_wd": 28.9154655444615,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 135833.33,
+    "direct": 16392.0638798734,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 1500,
+    "total": 17892.0638798734
+   }
+  },
+  {
+   "station": "Palmerston North",
+   "working_days_per_week": 5,
+   "local_factor": 0.8,
+   "wind_override": null,
+   "daily_prelims": 0,
+   "weekly_hire": 295,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Workshop fabrication / sheltered prep",
+     "start": "2039-04-11",
+     "finish": "2039-04-22",
+     "critical": false,
+     "labour": 0,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Drainage trenching",
+     "start": "2032-09-16",
+     "finish": "2033-10-01",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Steel erection / crane lifts",
+     "start": "2032-04-30",
+     "finish": "2033-05-15",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 0,
+     "overrides": {
+      "wind_loss": 0.75,
+      "wind_sensitivity": 0.5
+     }
+    },
+    {
+     "task": "Internal framing",
+     "start": "2032-01-06",
+     "finish": "2032-01-10",
+     "critical": false,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {
+      "nonrecoverable": 0.5
+     }
+    },
+    {
+     "task": "Internal painting",
+     "start": "2034-04-06",
+     "finish": "2034-04-17",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {
+      "rain_loss": 1.0
+     }
+    },
+    {
+     "task": "Kerb & channel",
+     "start": "2028-08-03",
+     "finish": "2028-09-02",
+     "critical": true,
+     "labour": 0,
+     "plant": 2500,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 10,
+      "wet_probability": 0.303333333333333,
+      "adjusted_wet_probability": 0.242666666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.000388266666666667,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.000388266666666667,
+      "direct_allowance": 12.942220928,
+      "lost_wd": 0.00388266666666667,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 272,
+      "wet_probability": 0.336880909573843,
+      "adjusted_wet_probability": 0.269504727659075,
+      "wind_probability": 0,
+      "rain_impact": 0.133135335463583,
+      "carryover_impact": 0.032340567319089,
+      "wind_impact": 0,
+      "combined_impact": 0.165475902782672,
+      "direct_allowance": 7558.77376320967,
+      "lost_wd": 45.0094455568867,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 271,
+      "wet_probability": 0.33435600875213,
+      "adjusted_wet_probability": 0.267484807001704,
+      "wind_probability": 0,
+      "rain_impact": 0.142301917324907,
+      "carryover_impact": 0.00427975691202727,
+      "wind_impact": 0,
+      "combined_impact": 0.146581674236934,
+      "direct_allowance": 1809.64897817669,
+      "lost_wd": 39.7236337182091,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 4,
+      "wet_probability": 0.264855687606112,
+      "adjusted_wet_probability": 0.21188455008489,
+      "wind_probability": 0,
+      "rain_impact": 0.00158913412563667,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00158913412563667,
+      "direct_allowance": 83.4295415959253,
+      "lost_wd": 0.00635653650254669,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 8,
+      "wet_probability": 0.303333333333333,
+      "adjusted_wet_probability": 0.242666666666667,
+      "wind_probability": 0,
+      "rain_impact": 0.00728,
+      "carryover_impact": 0,
+      "wind_impact": 0,
+      "combined_impact": 0.00728,
+      "direct_allowance": 7.28,
+      "lost_wd": 0.05824,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 22,
+      "wet_probability": 0.407319159335288,
+      "adjusted_wet_probability": 0.325855327468231,
+      "wind_probability": 0,
+      "rain_impact": 0.184189723851417,
+      "carryover_impact": 0.0138488514173998,
+      "wind_impact": 0,
+      "combined_impact": 0.198038575268817,
+      "direct_allowance": 495.096438172043,
+      "lost_wd": 4.35684865591398,
+      "cp_delay_wd": 4.35684865591398,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 147358,
+    "direct": 9967.17094208232,
+    "cp_delay_wd": 4.35684865591398,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 0,
+    "total": 10262.1709420823
+   }
+  },
+  {
+   "station": "Timaru",
+   "working_days_per_week": 4,
+   "local_factor": 1,
+   "wind_override": 0.1,
+   "daily_prelims": 0,
+   "weekly_hire": 295,
+   "recovery": 1500,
+   "activities": [
+    {
+     "task": "External concrete finishing",
+     "start": "2035-01-07",
+     "finish": "2035-01-07",
+     "critical": false,
+     "labour": 50000,
+     "plant": 2500,
+     "overrides": {
+      "wind_loss": 0.75
+     }
+    },
+    {
+     "task": "Internal framing",
+     "start": "2034-04-12",
+     "finish": "2034-06-26",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Fitout / cabinetry / joinery",
+     "start": "2037-08-30",
+     "finish": "2037-08-30",
+     "critical": false,
+     "labour": 1000,
+     "plant": 2500,
+     "overrides": {
+      "wind_sensitivity": 0.75
+     }
+    },
+    {
+     "task": "Landscaping / topsoil / grassing",
+     "start": "2032-09-19",
+     "finish": "2032-12-03",
+     "critical": true,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0.1,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0.003375,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 43,
+      "wet_probability": 0.205284654496958,
+      "adjusted_wet_probability": 0.205284654496958,
+      "wind_probability": 0.1,
+      "rain_impact": 0.000923780945236309,
+      "carryover_impact": 0,
+      "wind_impact": 0.00015,
+      "combined_impact": 0.00107378094523631,
+      "direct_allowance": 1.07378094523631,
+      "lost_wd": 0.0461725806451613,
+      "cp_delay_wd": 0.0461725806451613,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 0,
+      "wet_probability": null,
+      "adjusted_wet_probability": null,
+      "wind_probability": 0.1,
+      "rain_impact": null,
+      "carryover_impact": null,
+      "wind_impact": 0.0015,
+      "combined_impact": "#VALUE!",
+      "direct_allowance": "#VALUE!",
+      "lost_wd": "#VALUE!",
+      "cp_delay_wd": 0,
+      "status": "AMBER - task factors uncalibrated"
+     },
+     {
+      "workdays": 44,
+      "wet_probability": 0.236243326565907,
+      "adjusted_wet_probability": 0.236243326565907,
+      "wind_probability": 0.1,
+      "rain_impact": 0.063785698172795,
+      "carryover_impact": 0.0170095195127453,
+      "wind_impact": 0.003,
+      "combined_impact": 0.0837952176855403,
+      "direct_allowance": 83.7952176855403,
+      "lost_wd": 3.68698957816377,
+      "cp_delay_wd": 3.68698957816377,
+      "status": "AMBER - task factors uncalibrated"
+     }
+    ],
+    "exposed_pool": 58000,
+    "direct": "#VALUE!",
+    "cp_delay_wd": 3.73316215880893,
+    "prelims": 0,
+    "weeks": 1,
+    "hire": 295,
+    "recovery": 1500,
+    "total": "#VALUE!"
+   }
+  },
+  {
+   "station": "Napier",
+   "working_days_per_week": 5,
+   "local_factor": 1,
+   "wind_override": null,
+   "daily_prelims": 584,
+   "weekly_hire": 1234.5,
+   "recovery": 0,
+   "activities": [
+    {
+     "task": "Decking",
+     "start": "2026-05-10",
+     "finish": "2026-07-24",
+     "critical": false,
+     "labour": 50000,
+     "plant": 33333.33,
+     "overrides": {}
+    },
+    {
+     "task": "Cladding",
+     "start": "2037-01-17",
+     "finish": "2037-05-27",
+     "critical": false,
+     "labour": 1000,
+     "plant": 0,
+     "overrides": {}
+    },
+    {
+     "task": "Retaining wall excavation",
+     "start": "2027-01-26",
+     "finish": "2027-04-11",
+     "critical": false,
+     "labour": 12345.67,
+     "plant": 2500,
+     "overrides": {
+      "wind_sensitivity": 0.5
+     }
+    }
+   ],
+   "expected": {
+    "activities": [
+     {
+      "workdays": 55,
+      "wet_probability": 0.25851412905473,
+      "adjusted_wet_probability": 0.25851412905473,
+      "wind_probability": 0,
+      "rain_impact": 0.0845987487331603,
+      "carryover_impact": 0.00723839561353243,
+      "wind_impact": 0,
+      "combined_impact": 0.0918371443466927,
+      "direct_allowance": 7653.09505610058,
+      "lost_wd": 5.0510429390681,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 93,
+      "wet_probability": 0.231292352894227,
+      "adjusted_wet_probability": 0.231292352894227,
+      "wind_probability": 0,
+      "rain_impact": 0.0499591482251531,
+      "carryover_impact": 0.00277550823473073,
+      "wind_impact": 0,
+      "combined_impact": 0.0527346564598839,
+      "direct_allowance": 52.7346564598839,
+      "lost_wd": 4.9043230507692,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     },
+     {
+      "workdays": 54,
+      "wet_probability": 0.230791271819738,
+      "adjusted_wet_probability": 0.230791271819738,
+      "wind_probability": 0,
+      "rain_impact": 0.130454766396107,
+      "carryover_impact": 0.0294258871570166,
+      "wind_impact": 0,
+      "combined_impact": 0.159880653553124,
+      "direct_allowance": 2373.535422034,
+      "lost_wd": 8.63355529186867,
+      "cp_delay_wd": 0,
+      "status": "RED - wind input"
+     }
+    ],
+    "exposed_pool": 99179,
+    "direct": 10079.3651345945,
+    "cp_delay_wd": 0,
+    "prelims": 0,
+    "weeks": 0,
+    "hire": 0,
+    "recovery": 0,
+    "total": 10079.3651345945
+   }
+  }
+ ]
+}
