@@ -1,4 +1,4 @@
-import { assembleInputs, documents, gantt, loadMasterWorkbook, splitIntoPackages, submission } from "@blackline/tender";
+import { assembleInputs, documents, gantt, loadMasterWorkbook, procurement, splitIntoPackages, submission } from "@blackline/tender";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z, ZodError, type ZodType } from "zod";
 import type { Db } from "./db.js";
@@ -159,6 +159,15 @@ export function buildApp(db: Db): FastifyInstance {
     await jobs.getJob(db, ctx(req), jobId);
     const register = assembleInputs(await jobs.jobRecords(db, ctx(req), jobId)).register ?? [];
     const r = await jobs.ensurePackage(db, ctx(req), jobId, documents.documentsPackage(register));
+    return reply.status(r.created ? 201 : 200).send(r);
+  });
+
+  // the Tender Procurement package: one package per name in the quote register, linked to the subcontract package of the same name
+  app.post("/jobs/:jobId/procurement", async (req, reply) => {
+    const jobId = idParam((req.params as any).jobId);
+    await jobs.getJob(db, ctx(req), jobId);
+    const inputs = assembleInputs(await jobs.jobRecords(db, ctx(req), jobId));
+    const r = await jobs.ensurePackage(db, ctx(req), jobId, procurement.procurementPackage(inputs.quotes ?? [], inputs.overlays ?? []));
     return reply.status(r.created ? 201 : 200).send(r);
   });
 

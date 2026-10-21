@@ -22,7 +22,7 @@ export interface Gate {
   /** In plain words, for the person issuing */
   text: string;
   /** The window that fixes it */
-  where: "scope" | "estimate" | "commercial" | "summary" | "risk" | "documents";
+  where: "scope" | "estimate" | "commercial" | "summary" | "risk" | "documents" | "procurement";
   count?: number;
 }
 
@@ -40,6 +40,7 @@ export function gates(e: Estimate): { blockers: Gate[]; warnings: Gate[] } {
     if (sc.counts.CHECK) blockers.push({ id: "scope-check", text: `${plural(sc.counts.CHECK, "scope item")} ${sc.counts.CHECK === 1 ? "is" : "are"} flagged to confirm (a link, a quote or an RFI isn't backed up).`, where: "scope", count: sc.counts.CHECK });
   }
   if (e.documents.open) blockers.push({ id: "documents", text: `${plural(e.documents.open, "document change")} ${e.documents.open === 1 ? "has" : "have"} not been checked against what ${e.documents.open === 1 ? "it touches" : "they touch"} (scope, estimate lines, quotes).`, where: "documents", count: e.documents.open });
+  if (e.procurement.blocking) blockers.push({ id: "procurement", text: `${plural(e.procurement.blocking, "thing")} to put right in the selected quotes: ${e.procurement.packages.flatMap((p) => p.problems).slice(0, 2).join(" ")}`, where: "procurement", count: e.procurement.blocking });
   const bad = e.rows.filter((r) => BLOCKING_QA.has(r.qaFlag)).length;
   if (bad) blockers.push({ id: "rows", text: `${plural(bad, "build-up row")} ${bad === 1 ? "has" : "have"} no rate or ${bad === 1 ? "a" : ""} double count.`, where: "estimate", count: bad });
   if (!e.schedule.reconciles) blockers.push({ id: "schedule", text: "The client price schedule does not add up to the all-in tender.", where: "summary" });
@@ -48,6 +49,8 @@ export function gates(e: Estimate): { blockers: Gate[]; warnings: Gate[] } {
   if (!e.riskTruth.gate.startsWith("PASS")) warnings.push({ id: "risk", text: `Risk Truth release gate: ${e.riskTruth.gate}.`, where: "risk" });
   const minor = e.rows.filter((r) => r.qaFlag !== "OK" && !BLOCKING_QA.has(r.qaFlag)).length;
   if (minor) warnings.push({ id: "qa", text: `${plural(minor, "build-up row")} ${minor === 1 ? "has" : "have"} a check flag (not blocking).`, where: "estimate", count: minor });
+  if (e.procurement.toAdjudicate) warnings.push({ id: "procurement-open", text: `${plural(e.procurement.toAdjudicate, "package")} ${e.procurement.toAdjudicate === 1 ? "has" : "have"} quotes in and none selected.`, where: "procurement", count: e.procurement.toAdjudicate });
+  if (e.procurement.differences) warnings.push({ id: "procurement-diff", text: `${plural(e.procurement.differences, "selected quote")} ${e.procurement.differences === 1 ? "differs" : "differ"} from what the estimate carries for that package.`, where: "procurement", count: e.procurement.differences });
   if (e.programme && "setUp" in e.programme) warnings.push({ id: "programme", text: "No programme has been started, so the weather allowance and time-related costs have no programme behind them.", where: "summary" });
   return { blockers, warnings };
 }

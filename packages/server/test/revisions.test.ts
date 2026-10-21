@@ -145,6 +145,33 @@ describe("a changed document holds the tender", () => {
   });
 });
 
+describe("procurement holds the tender", () => {
+  it("starts from the quote register, and a selected quote with an exclusion nobody dealt with blocks issuing until it is", async () => {
+    const t = await ready("Procure Co");
+    const quote = { kind: "quote", seq: 1, body: { id: "Q-01", ref: "Q-01", package: "Concrete sub", supplier: "Coast Concrete", estimate_ref: "", qty: "", unit: "", amount: "5000", scope: "", documents: "", status: "", action: "", notes: "", treatment: "", verification: "", source: "", quote_date: "", valid_until: "" } };
+    expect((await t.est.post(`/packages/${t.byKey.narrative}/checkout`)).status).toBe(200);
+    expect((await t.est.post(`/packages/${t.byKey.narrative}/checkin`, { baseVersion: 2, upserts: { "quote:Q-01": quote }, deletes: [] })).status).toBe(200);
+
+    expect((await t.est.post(`/jobs/${t.jobId}/procurement`, {})).body.created).toBe(true);
+    expect((await t.est.post(`/jobs/${t.jobId}/procurement`, {})).body.created).toBe(false);
+    const all = (await t.owner.get(`/jobs/${t.jobId}/records`)).body as { packages: { id: string; key: string }[]; records: { id: string; data: any }[] };
+    expect(all.records.find((r) => r.id === "pp:P1")!.data.body).toMatchObject({ name: "Concrete sub", overlay: "Concrete sub" });
+
+    const pkg = all.packages.find((p) => p.key === "procurement")!.id;
+    const selected = { kind: "procPackage", seq: 1000, body: { id: "P1", name: "Concrete sub", overlay: "Concrete sub", scope: "", selected: "Q-01", reason: "Only quote", by: "Eli", at: "2026-11-01T00:00:00Z" } };
+    const level = (treatment: string) => ({ kind: "procLevel", body: { quoteRef: "Q-01", adjustments: [], exclusions: [{ text: "Rock excavation", treatment, note: "" }], note: "" } });
+    expect((await t.est.post(`/packages/${pkg}/checkout`)).status).toBe(200);
+    expect((await t.est.post(`/packages/${pkg}/checkin`, { baseVersion: 1, upserts: { "pp:P1": selected, "pl:Q-01": level("") }, deletes: [] })).status).toBe(200);
+    const blocked = await t.mgr.post(`/jobs/${t.jobId}/revisions`, {});
+    expect([blocked.status, blocked.body.error.code]).toEqual([409, "blocked"]);
+    expect(blocked.body.error.message).toContain("selected quotes");
+
+    expect((await t.est.post(`/packages/${pkg}/checkout`)).status).toBe(200);
+    expect((await t.est.post(`/packages/${pkg}/checkin`, { baseVersion: 2, upserts: { "pl:Q-01": level("by others") }, deletes: [] })).status).toBe(200);
+    expect((await t.mgr.post(`/jobs/${t.jobId}/revisions`, {})).status).toBe(201);
+  });
+});
+
 describe("the Submission package", () => {
   it("starts with the letter and qualifications drafted from the register, once, for an estimator", async () => {
     const { owner } = await newCompany(s, "Letter Co");

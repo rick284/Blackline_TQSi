@@ -31,7 +31,7 @@ export interface SeedPackage {
   /** Stable key within a job, e.g. "qs:Earthworks". */
   key: string;
   name: string;
-  kind: "qs-section" | "library" | "commercial" | "subcontracts" | "risk" | "narrative" | "programme" | "settings" | "gantt" | "submission" | "documents";
+  kind: "qs-section" | "library" | "commercial" | "subcontracts" | "risk" | "narrative" | "programme" | "settings" | "gantt" | "submission" | "documents" | "procurement";
   records: Record<string, RecordData>;
 }
 
@@ -144,8 +144,10 @@ export function assembleInputs(records: Iterable<{ id: string; data: RecordData 
   const reference = settings.get("reference") ?? null;
   const withSeq = (kind: string) => (of.get(kind) ?? []).sort(bySeq).map((r) => ({ ...(r.body as any), seq: r.seq }));
   const documents = of.has("tenderDoc") ? { docs: withSeq("tenderDoc"), revisions: withSeq("tenderDocRev"), clears: list<any>("tenderDocClear") } : undefined;
+  const procurement = of.has("procPackage") ? { packages: withSeq("procPackage"), invites: withSeq("procInvite"), levels: list<any>("procLevel") } : undefined;
   return {
     ...(documents ? { documents } : {}),
+    ...(procurement ? { procurement } : {}),
     meta: settings.get("meta") ?? {},
     library: list<LibraryRate>("library"),
     qs: list<QSItem>("qs"),

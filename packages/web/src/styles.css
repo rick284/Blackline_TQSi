@@ -268,6 +268,11 @@ table.reg td.overdue { font-weight: 700; color: var(--black); }
 .revform label.grow { flex: 1; min-width: 220px; }
 .revform input { height: 24px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 0; font: inherit; background: var(--paper); }
 .revline { display: flex; gap: 10px; align-items: center; padding: 2px 0; }
+.levelgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.levelgrid h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.exline { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
+.exline select { width: 190px; height: 24px; border: 1px solid var(--line-strong); border-radius: 0; background: var(--paper); font: inherit; }
+@media (max-width: 1100px) { .levelgrid { grid-template-columns: 1fr; } }
 
 /* tender letter: on screen as a page, and the same page when printed */
 #print-root { display: none; }

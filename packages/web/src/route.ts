@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-export type View = "estimate" | "packages" | "rates" | "scope" | "commercial" | "programme" | "gantt" | "submission" | "documents" | "parked" | "summary";
+export type View = "estimate" | "packages" | "rates" | "scope" | "commercial" | "programme" | "gantt" | "submission" | "documents" | "procurement" | "parked" | "summary";
 export type ContactsTab = "enquiries" | "contacts";
 export type Route = { page: "jobs" } | { page: "contacts"; tab: ContactsTab } | { page: "job"; jobId: string; view: View };
 
-const VIEWS: View[] = ["estimate", "packages", "rates", "scope", "commercial", "programme", "gantt", "submission", "documents", "parked", "summary"];
+const VIEWS: View[] = ["estimate", "packages", "rates", "scope", "commercial", "programme", "gantt", "submission", "documents", "procurement", "parked", "summary"];
 
 export function parseHash(hash: string): Route {
   const c = /^#\/contacts(?:\/(\w+))?$/.exec(hash);
