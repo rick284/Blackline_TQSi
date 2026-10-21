@@ -1,141 +1,299 @@
-import { allocate, cents, D, type Dec, sum, ZERO } from "./money.js";
-import {
-  type Estimate,
-  type EstimateLine,
-  type ResourceKind,
-  RESOURCE_KINDS,
-  type Section,
+/**
+ * Estimate pricing, ported from Blackline QSi (backend/services/estimate_engine.py and
+ * pricing_engine.py) onto decimal arithmetic.
+ *
+ *   cost base         direct cost of included zones / tasks / resources, each line rounded to the cent
+ *   + risk allowance  rows of (% of a basis); basis is the whole cost base or a set of categories
+ *   + register risks  expected values of risks ticked "include in pricing"
+ *   + overhead        % of cost base
+ *   = total before profit
+ *   / (1 - margin%)   = sell price ex GST, then GST on top
+ *
+ * Opportunities are shown but never change the price.
+ */
+import { cents, D, type Dec, ZERO } from "./money.js";
+import type {
+  EstimateInput,
+  LegacyRiskConfig,
+  Num,
+  RegisterItem,
+  ResourceLine,
+  RiskLine,
 } from "./types.js";
 
-export type ByKind = Record<ResourceKind, Dec>;
+export const TOTAL = "total";
 
-export interface LineResult {
-  lineId: string;
-  /** Direct cost per line unit, 4dp, for display only. Totals never use it. */
-  unitRate: Dec;
-  byKind: ByKind;
+const num = (x: Num): Dec => new D(x === null || x === undefined || x === "" ? 0 : String(x));
+const included = (item: { included_in_total?: boolean | null }) =>
+  item.included_in_total === undefined || item.included_in_total === null ? true : !!item.included_in_total;
+
+const LABOUR = ["labour", "labor", "labours"];
+const MATERIAL = ["material", "materials"];
+const SUBCONTRACTOR = ["subcontractor", "subcontractors", "sub", "subcontract"];
+const PLANT = ["plant", "plant/equipment", "plant hire", "plant_hire", "equipment", "plant & equipment"];
+
+/** Built-in categories collapse to a key; anything else is a custom category kept under its own name. */
+export function normalizeCategory(raw: string | undefined): { key: string; custom: boolean } {
+  if (!raw) return { key: "other", custom: false };
+  const c = raw.toLowerCase().trim();
+  if (LABOUR.includes(c)) return { key: "labour", custom: false };
+  if (MATERIAL.includes(c)) return { key: "material", custom: false };
+  if (SUBCONTRACTOR.includes(c)) return { key: "subcontractor", custom: false };
+  if (PLANT.includes(c)) return { key: "plant", custom: false };
+  return { key: raw, custom: true };
+}
+
+export interface CostBase {
   directCost: Dec;
-  labourHours: Dec;
-  /** This line's share of the estimate sell price, reconciled to the cent. */
-  sell: Dec;
+  excludedCost: Dec;
+  costBase: Dec;
+  categoryTotals: Map<string, Dec>;
 }
 
-export interface SectionResult {
-  sectionId: string;
-  byKind: ByKind;
-  directCost: Dec;
-  labourHours: Dec;
-  sell: Dec;
-}
+const lineCost = (r: ResourceLine) => cents(num(r.qty).times(num(r.rate)));
 
-export interface Summary {
-  byKind: ByKind;
-  directCost: Dec;
-  onCosts: { id: string; name: string; amount: Dec }[];
-  overhead: Dec;
-  totalCost: Dec;
-  margin: Dec;
-  sell: Dec;
-  labourHours: Dec;
-}
+export function buildCostBase(est: EstimateInput): CostBase {
+  const cat = new Map<string, Dec>(["labour", "material", "subcontractor", "plant", "other"].map((k) => [k, ZERO]));
+  let direct = ZERO;
+  let excluded = ZERO;
 
-export interface EstimateResult {
-  lines: Map<string, LineResult>;
-  sections: Map<string, SectionResult>;
-  summary: Summary;
-}
+  const add = (r: ResourceLine, cost: Dec) => {
+    const { key } = normalizeCategory(r.category || r.type || "");
+    cat.set(key, (cat.get(key) ?? ZERO).plus(cost));
+  };
 
-const emptyKinds = (): ByKind =>
-  Object.fromEntries(RESOURCE_KINDS.map((k) => [k, ZERO])) as ByKind;
-
-const addKinds = (a: ByKind, b: ByKind): ByKind =>
-  Object.fromEntries(RESOURCE_KINDS.map((k) => [k, a[k].plus(b[k])])) as ByKind;
-
-function priceLine(line: EstimateLine, est: Estimate): Omit<LineResult, "sell"> {
-  const qty = new D(line.quantity);
-  const raw = emptyKinds();
-  let hours = ZERO;
-
-  for (const c of line.components) {
-    const res = est.resources.find((r) => r.id === c.resourceId);
-    if (!res) throw new Error(`Line ${line.code}: unknown resource ${c.resourceId}`);
-    const waste = new D(1).plus(new D(c.wastePct ?? 0).div(100));
-    const perUnit = new D(c.qtyPerUnit).times(waste);
-    raw[res.kind] = raw[res.kind].plus(qty.times(perUnit).times(res.rate));
-    if (res.kind === "labour" && res.unit === "hr") hours = hours.plus(qty.times(perUnit));
+  for (const zone of est.zones ?? []) {
+    const zoneIn = included(zone);
+    for (const task of zone.tasks ?? []) {
+      const taskIn = included(task);
+      for (const r of task.resources ?? []) {
+        const cost = lineCost(r);
+        if (zoneIn && taskIn && included(r)) {
+          add(r, cost);
+          direct = direct.plus(cost);
+        } else {
+          excluded = excluded.plus(cost);
+        }
+      }
+    }
   }
 
-  // Round each kind to the cent; the line total is the sum of the rounded parts.
-  const byKind = Object.fromEntries(RESOURCE_KINDS.map((k) => [k, cents(raw[k])])) as ByKind;
-  const directCost = sum(Object.values(byKind));
-  const unitRate = qty.isZero() ? ZERO : directCost.div(qty).toDecimalPlaces(4);
-  return { lineId: line.id, unitRate, byKind, directCost, labourHours: hours };
+  for (const item of est.line_items ?? []) {
+    const cost = lineCost(item);
+    if (included(item)) {
+      add(item, cost);
+      direct = direct.plus(cost);
+    } else {
+      excluded = excluded.plus(cost);
+    }
+  }
+
+  return { directCost: direct, excludedCost: excluded, costBase: cents(direct), categoryTotals: cat };
 }
 
-function collectLines(s: Section, out: EstimateLine[] = []): EstimateLine[] {
-  out.push(...s.lines);
-  for (const c of s.sections) collectLines(c, out);
-  return out;
+// ---- risk -----------------------------------------------------------------
+
+/** The fixed lines of QSi's original "detailed risk" panel, in order. */
+const LEGACY_ALLOWANCES: [string, string, string[] | null][] = [
+  ["labour", "Labour allowance", ["labour"]],
+  ["material", "Material allowance", ["material"]],
+  ["subcontractor", "Subcontractor allowance", ["subcontractor"]],
+  ["plant", "Plant & equipment allowance", ["plant"]],
+  ["weather", "Weather allowance", ["plant", "labour"]],
+  ["sundries", "Sundries allowance", ["labour", "material", "plant"]],
+  ["design", "Design allowance", [TOTAL]],
+  ["trueUnknowns", "True unknowns", [TOTAL]],
+  ["custom", "Custom allowance 1", [TOTAL]],
+  ["custom2", "Custom allowance 2", [TOTAL]],
+  ["additional1", "Additional risk 1", null],
+  ["additional2", "Additional risk 2", null],
+  ["additional3", "Additional risk 3", null],
+];
+const OPPORTUNITY_KEYS = ["opportunity1", "opportunity2", "opportunity3"];
+
+export function legacyToRiskLines(est: EstimateInput): RiskLine[] {
+  const settings = est.detailed_risk_settings;
+  if (!(est.use_detailed_risk && settings && Object.keys(settings).length > 0)) {
+    return [
+      {
+        id: "general",
+        legacy_key: "general",
+        name: "General allowance",
+        kind: "allowance",
+        basis: [TOTAL],
+        percent: est.risk_allowance_percent ?? 5,
+        enabled: true,
+      },
+    ];
+  }
+  const rows: RiskLine[] = [];
+  for (const [key, name, basis] of LEGACY_ALLOWANCES) {
+    const cfg: LegacyRiskConfig = settings[key] ?? {};
+    if (!cfg.enabled) continue;
+    rows.push({
+      id: `legacy-${key}`,
+      legacy_key: key,
+      kind: "allowance",
+      name: cfg.name || name,
+      basis: basis === null ? [cfg.linkedCategory ?? ""] : [...basis],
+      percent: cfg.percent || 0,
+      enabled: true,
+    });
+  }
+  OPPORTUNITY_KEYS.forEach((key, i) => {
+    const cfg: LegacyRiskConfig = settings[key] ?? {};
+    if (!cfg.enabled) return;
+    const linked = cfg.linkedCategory || "";
+    rows.push({
+      id: `legacy-${key}`,
+      legacy_key: key,
+      kind: "opportunity",
+      name: cfg.name || `Opportunity ${i + 1}`,
+      basis: linked ? [linked] : [TOTAL],
+      percent: cfg.percent || 0,
+      enabled: true,
+    });
+  });
+  return rows;
 }
 
-export function calculate(est: Estimate): EstimateResult {
-  const lines = collectLines(est.root);
-  const priced = lines.map((l) => priceLine(l, est));
+export interface RiskRowResult {
+  id?: string;
+  name?: string;
+  basis: string[];
+  percent: Dec;
+  base: Dec;
+  amount: Dec;
+}
 
-  const byKind = priced.reduce((acc, p) => addKinds(acc, p.byKind), emptyKinds());
-  const directCost = sum(priced.map((p) => p.directCost));
+export interface RiskResult {
+  amount: Dec;
+  lines: RiskRowResult[];
+  opportunitiesTotal: Dec;
+  opportunityLines: RiskRowResult[];
+}
 
-  const onCosts = est.settings.onCosts.map((oc) => ({
-    id: oc.id,
-    name: oc.name,
-    amount: cents(sum(oc.appliesTo.map((k) => byKind[k])).times(oc.pct).div(100)),
-  }));
-  const withOnCosts = directCost.plus(sum(onCosts.map((o) => o.amount)));
-  const overhead = cents(withOnCosts.times(est.settings.overheadPct).div(100));
-  const totalCost = withOnCosts.plus(overhead);
+export function priceRiskLines(lines: RiskLine[], categories: Map<string, Dec>, costBase: Dec): RiskResult {
+  const allowances: RiskRowResult[] = [];
+  const opportunities: RiskRowResult[] = [];
+  let allowanceTotal = ZERO;
+  let opportunityTotal = ZERO;
 
-  const mpct = new D(est.settings.margin.pct).div(100);
-  const margin =
-    est.settings.margin.mode === "markup"
-      ? cents(totalCost.times(mpct))
-      : cents(totalCost.div(new D(1).minus(mpct)).minus(totalCost));
-  const sell = totalCost.plus(margin);
-
-  const labourHours = sum(priced.map((p) => p.labourHours));
-
-  // Spread the sell price over lines in proportion to direct cost.
-  const sells = allocate(sell, priced.map((p) => p.directCost));
-  const lineMap = new Map<string, LineResult>();
-  priced.forEach((p, i) => lineMap.set(p.lineId, { ...p, sell: sells[i]! }));
-
-  const sectionMap = new Map<string, SectionResult>();
-  const rollUp = (s: Section): SectionResult => {
-    let r: SectionResult = {
-      sectionId: s.id,
-      byKind: emptyKinds(),
-      directCost: ZERO,
-      labourHours: ZERO,
-      sell: ZERO,
-    };
-    const add = (x: Omit<SectionResult, "sectionId">) => {
-      r = {
-        sectionId: s.id,
-        byKind: addKinds(r.byKind, x.byKind),
-        directCost: r.directCost.plus(x.directCost),
-        labourHours: r.labourHours.plus(x.labourHours),
-        sell: r.sell.plus(x.sell),
-      };
-    };
-    for (const l of s.lines) add(lineMap.get(l.id)!);
-    for (const c of s.sections) add(rollUp(c));
-    sectionMap.set(s.id, r);
-    return r;
+  for (const line of lines) {
+    if (line.enabled === false) continue;
+    const percent = num(line.percent);
+    const basis = line.basis ?? [];
+    const base = basis.includes(TOTAL)
+      ? costBase
+      : basis.reduce((t, c) => t.plus(categories.get(c) ?? ZERO), ZERO);
+    const amount = cents(base.times(percent).div(100));
+    const row: RiskRowResult = { id: line.id, name: line.name, basis: [...basis], percent, base, amount };
+    if (line.kind === "opportunity") {
+      opportunityTotal = opportunityTotal.plus(amount);
+      opportunities.push(row);
+    } else {
+      allowanceTotal = allowanceTotal.plus(amount);
+      allowances.push(row);
+    }
+  }
+  return {
+    amount: cents(allowanceTotal),
+    lines: allowances,
+    opportunitiesTotal: cents(opportunityTotal),
+    opportunityLines: opportunities,
   };
-  rollUp(est.root);
+}
+
+export interface RegisterSummary {
+  included: Dec;
+  excluded: Dec;
+  opportunitiesShown: Dec;
+  opportunitiesReference: Dec;
+}
+
+/** Project risk register: only active, open risks ticked "include in pricing" are priced. */
+export function summariseRegister(risks: RegisterItem[]): RegisterSummary {
+  let inc = ZERO;
+  let exc = ZERO;
+  let shown = ZERO;
+  let ref = ZERO;
+  for (const r of risks) {
+    const active = r.is_active ?? r.is_financially_active ?? true;
+    if (!active || (r.status ?? "identified") === "closed") continue;
+    const ev = num(r.expected_value);
+    const selected = !!r.include_in_pricing;
+    if ((r.item_type ?? "risk") === "opportunity") {
+      if (selected) shown = shown.plus(ev);
+      else ref = ref.plus(ev);
+    } else if (selected) inc = inc.plus(ev);
+    else exc = exc.plus(ev);
+  }
+  return {
+    included: cents(inc),
+    excluded: cents(exc),
+    opportunitiesShown: cents(shown),
+    opportunitiesReference: cents(ref),
+  };
+}
+
+// ---- totals ---------------------------------------------------------------
+
+export interface EstimateTotals {
+  directCost: Dec;
+  excludedCost: Dec;
+  fullPotentialDirectCost: Dec;
+  costBase: Dec;
+  categoryTotals: Map<string, Dec>;
+  risk: RiskResult;
+  registerIncluded: Dec;
+  registerExcluded: Dec;
+  registerOpportunitiesNotPriced: Dec;
+  overhead: Dec;
+  totalBeforeProfit: Dec;
+  profit: Dec;
+  sellExGst: Dec;
+  gst: Dec;
+  totalIncGst: Dec;
+  /** Gross margin on sell, percent to 2dp. */
+  grossMarginPct: Dec;
+}
+
+export function calculateEstimate(est: EstimateInput, register: RegisterItem[] = []): EstimateTotals {
+  const cb = buildCostBase(est);
+  const costBase = cb.costBase;
+
+  const rows = est.risk_lines ?? legacyToRiskLines(est);
+  const risk = priceRiskLines(rows, cb.categoryTotals, costBase);
+
+  const reg = summariseRegister(register);
+  const overheadPct = num(est.overhead_percent ?? 10);
+  const overhead = cents(costBase.times(overheadPct).div(100));
+
+  const marginPct = num(est.profit_margin_percent ?? 15);
+  const totalBeforeProfit = costBase.plus(risk.amount).plus(reg.included).plus(overhead);
+  const sell = marginPct.lt(100) ? cents(totalBeforeProfit.div(new D(1).minus(marginPct.div(100)))) : totalBeforeProfit;
+  const profit = cents(sell.minus(totalBeforeProfit));
+
+  const gst = cents(sell.times(num(est.gst_percent ?? 15)).div(100));
+  const totalIncGst = cents(sell.plus(gst));
+  const grossMarginPct = sell.gt(0) ? sell.minus(costBase).div(sell).times(100).toDecimalPlaces(2, D.ROUND_HALF_UP) : ZERO;
 
   return {
-    lines: lineMap,
-    sections: sectionMap,
-    summary: { byKind, directCost, onCosts, overhead, totalCost, margin, sell, labourHours },
+    directCost: cents(cb.directCost),
+    excludedCost: cents(cb.excludedCost),
+    fullPotentialDirectCost: cents(cb.directCost.plus(cb.excludedCost)),
+    costBase,
+    categoryTotals: cb.categoryTotals,
+    risk,
+    registerIncluded: reg.included,
+    registerExcluded: reg.excluded,
+    registerOpportunitiesNotPriced: reg.opportunitiesShown,
+    overhead,
+    totalBeforeProfit,
+    profit,
+    sellExGst: sell,
+    gst,
+    totalIncGst,
+    grossMarginPct,
   };
 }

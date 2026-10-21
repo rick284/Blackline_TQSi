@@ -14,5 +14,11 @@ Estimating and cost-control platform for NZ construction contractors. Read `ARCH
 - `npx tsc -b packages/engine packages/checkout` typechecks.
 
 ## Status
-Built: engine (build-ups, on-costs, overhead, markup/margin, line/section roll-ups, sell allocation) and checkout logic, with tests.
-Next: validate the engine against real priced jobs (329 Hobsonville Road, 48 Eastglen Road), then the data model and server, then Rate Library and Estimate screens.
+Built:
+- `packages/engine`: the Blackline QSi pricing formulas (rick284/blackline-estimating-standalone, `backend/services/estimate_engine.py` and `pricing_engine.py`) on decimal arithmetic: zone/task/resource cost base with include/exclude flags, risk rows (legacy and rows model), register risks, overhead on cost base, margin on sell, GST, gross margin. Checked against QSi's 33 server-generated cases (`test/fixtures/qsi_pricing_cases.json`).
+- `packages/checkout`: lock, check-in, break-lock and parking rules, with tests.
+
+Known difference from QSi: QSi rounds with Python floats, so an exact half cent (5% of 36,902.50) rounds down there and up here. 11 cases differ by 1 to 2 cents for that reason (`HALF_CENT_TIES` in the fixture test). Everything else matches exactly.
+
+Not yet ported from QSi: variations, full-potential scenario, commercial control (budget, actuals, claims, retentions), QSi Pro (rick284/tender-estimating-platform) additions.
+Next: check against the Eastglen and Hobsonville spreadsheets, then the data model and server, then Rate Library and Estimate screens.
