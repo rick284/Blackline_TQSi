@@ -3,10 +3,10 @@ import type { ColDef, GridApi } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { scope as sc } from "@blackline/tender/core";
 import { gridTheme, monoCell } from "../grid.js";
-import { money } from "../lib/fmt.js";
 import { addReference, newScopeItem, setScopeField, type ScopeBody } from "../lib/scope.js";
 import type { Workspace } from "../workspace.js";
 import { PackageBar } from "./PackageBar.js";
+import { ReferencePanel } from "./References.js";
 
 type Item = ReturnType<typeof computeItems>[number] & { isNew?: boolean };
 const computeItems = (ws: Workspace) => ws.model!.estimate.scope.items;
@@ -14,7 +14,6 @@ const NEW = "__new";
 const blank = (): Item => ({ id: NEW, ref: "", group: "", title: "", detail: "", source: "", owner: "", treatment: "", cost_refs: "", register_refs: "", quote_refs: "", basis: "", action: "", status: "MISSING", problems: [], isNew: true });
 
 const list = (xs: readonly string[]) => ["", ...xs];
-type RefTab = "register" | "quotes";
 
 /**
  * The Scope Register. Every requirement of the job (permanent works, enabling works, access, temporary works, testing, interfaces with
@@ -29,9 +28,6 @@ export function Scope({ ws }: { ws: Workspace }) {
   const editable = !!pkgId && ws.canEdit(pkgId);
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<RefTab>("register");
-  const [kind, setKind] = useState("");
-  const [pickedRef, setPickedRef] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const gridApi = useRef<GridApi<Item> | null>(null);
   const accepted = useRef(false);
@@ -129,8 +125,6 @@ export function Scope({ ws }: { ws: Workspace }) {
   };
 
   const gateClass = result.gate.startsWith("PASS") ? "notice" : result.gate.startsWith("HOLD") ? "notice error" : "notice warn";
-  const registerRows = useMemo(() => model.register.filter((x) => !kind || x.kind === kind), [model.register, kind]);
-  const kinds = useMemo(() => [...new Set(model.register.map((x) => x.kind))], [model.register]);
 
   if (!pkgId) return <div className="empty">This job has no register package yet.</div>;
 
@@ -179,55 +173,7 @@ export function Scope({ ws }: { ws: Workspace }) {
         {sel && sel.problems.length === 0 && <div className="problems"><strong>{sel.ref}</strong> <span>Owned, treated and backed up.</span></div>}
       </div>
 
-      <div className="pane" style={{ flex: "2 1 0" }}>
-        <h3>
-          Reference
-          <span className="tabs">
-            <button className={tab === "register" ? "on" : ""} onClick={() => { setTab("register"); setPickedRef(null); }}>Register ({model.register.length})</button>
-            <button className={tab === "quotes" ? "on" : ""} onClick={() => { setTab("quotes"); setPickedRef(null); }}>Quotes ({model.quotes.length})</button>
-          </span>
-          {tab === "register" && kinds.length > 0 && (
-            <select value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Kind of register item" style={{ height: 20 }}>
-              <option value="">All kinds</option>
-              {kinds.map((k) => <option key={k} value={k}>{k}</option>)}
-            </select>
-          )}
-          <button className="btn" style={{ marginLeft: "auto" }} disabled={!editable || !sel || !pickedRef} onClick={() => pickedRef && link(tab === "register" ? "register_refs" : "quote_refs", pickedRef)}>
-            {sel && pickedRef ? `Link ${pickedRef} to ${sel.ref}` : "Link to the selected requirement"}
-          </button>
-        </h3>
-        <div className="grid">
-          {tab === "register" ? (
-            <AgGridReact
-              theme={gridTheme} rowData={registerRows} animateRows={false} suppressMovableColumns getRowId={(p) => p.data.id}
-              rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true }}
-              onSelectionChanged={(e) => setPickedRef(e.api.getSelectedRows()[0]?.ref ?? null)}
-              columnDefs={[
-                { field: "kind", headerName: "Kind", width: 100 },
-                { field: "ref", headerName: "Ref", width: 90, cellClass: "mono" },
-                { headerName: "Item", flex: 1, minWidth: 300, valueGetter: (p) => p.data?.title || p.data?.detail, tooltipValueGetter: (p) => p.data?.detail || p.data?.title },
-                { field: "status", headerName: "Status", width: 100 },
-                { field: "rag", headerName: "Rating", width: 84 },
-                { field: "owner", headerName: "Owner", width: 130 },
-              ]}
-            />
-          ) : (
-            <AgGridReact
-              theme={gridTheme} rowData={model.quotes} animateRows={false} suppressMovableColumns getRowId={(p) => p.data.id}
-              rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true }}
-              onSelectionChanged={(e) => setPickedRef(e.api.getSelectedRows()[0]?.ref ?? null)}
-              columnDefs={[
-                { field: "ref", headerName: "Quote", width: 80, cellClass: "mono" },
-                { field: "package", headerName: "Package", flex: 1, minWidth: 220 },
-                { field: "supplier", headerName: "Supplier", width: 220 },
-                { field: "estimate_ref", headerName: "Estimate ref", width: 130 },
-                { field: "amount", headerName: "Amount", width: 110, cellStyle: monoCell, valueFormatter: (p) => (p.value ? money(p.value) : "") },
-                { field: "status", headerName: "Status", flex: 1, minWidth: 200 },
-              ]}
-            />
-          )}
-        </div>
-      </div>
+      <ReferencePanel ws={ws} model={model} pkgId={pkgId} editable={editable} target={sel ? { ref: sel.ref } : null} onLink={link} />
     </>
   );
 }
