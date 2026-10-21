@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addPerson, jobWithEstimate, newCompany, testServer, type TestServer } from "./helpers.js";
+import { addPerson, jobWithEstimate, newCompany, testServer, refuses, type TestServer } from "./helpers.js";
 
 let s: TestServer;
 beforeAll(async () => { s = await testServer(); });
@@ -74,8 +74,8 @@ describe("awarding a job", () => {
   it("keeps the budget as awarded: the database refuses any edit or delete of its lines", async () => {
     const t = await issued("Guard Co");
     await t.mgr.post(`/jobs/${t.jobId}/award`, { revisionId: t.revs[0].id });
-    await expect(s.db.query("update contract_budget_lines set amount = '1.00' where code = 'EW01'")).rejects.toThrow(/cannot be edited or deleted/);
-    await expect(s.db.query("delete from contract_budget_lines")).rejects.toThrow(/cannot be edited or deleted/);
+    await refuses(s.db.query("update contract_budget_lines set amount = '1.00' where code = 'EW01'"), /cannot be edited or deleted/);
+    await refuses(s.db.query("delete from contract_budget_lines"), /cannot be edited or deleted/);
   });
 
   it("won't award from a revision that no longer matches what was issued", async () => {

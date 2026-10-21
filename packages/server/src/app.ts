@@ -14,6 +14,8 @@ import * as exports_ from "./repo/exports.js";
 import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
 import * as revisions from "./repo/revisions.js";
+import { minutes, RateLimiter } from "./ratelimit.js";
+import { SECURITY_HEADERS, webHandler } from "./web.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -44,18 +46,67 @@ const changeSet = z.object({
   deletes: z.array(z.string().min(1).max(200)).default([]),
 }).refine((c) => !c.deletes.some((d) => d in c.upserts), { message: "A record cannot be both changed and deleted in the same check-in.", path: ["deletes"] });
 
-const PUBLIC = new Set(["/health", "/auth/register", "/auth/login"]);
+const PUBLIC = new Set(["/health", "/auth/status", "/auth/register", "/auth/login"]);
 
-export function buildApp(db: Db): FastifyInstance {
-  const app = Fastify({ logger: false, bodyLimit: 5 * 1024 * 1024 });
+/**
+ * How the server is run. Everything is off by default, which is what development and the tests want; `main.ts` turns it on for a hosted server.
+ *  - webDir: serve the built web app from here (and answer `/api/...` as the API), so one server is the whole product.
+ *  - registration: who may start a new company. "open" = anyone, "first" = only while there are no companies (the owner sets up their own), "closed" = nobody
+ *    (companies are made with the admin tool).
+ *  - rateLimit: slow down password guessing and sign-up spam.
+ *  - trustProxy: believe `X-Forwarded-For` (set this only when the server really sits behind the host's proxy, or anyone could fake an address).
+ *  - secureHeaders: send the browser-hardening headers (and HSTS on HTTPS requests).
+ */
+export interface AppOptions {
+  webDir?: string;
+  registration?: "open" | "first" | "closed";
+  rateLimit?: boolean | { loginPerEmail?: number; loginPerIp?: number; registerPerIp?: number; windowMs?: number };
+  trustProxy?: boolean;
+  secureHeaders?: boolean;
+}
+
+export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
+  const app = Fastify({
+    logger: false,
+    bodyLimit: 5 * 1024 * 1024,
+    trustProxy: opts.trustProxy ?? false,
+    // the web app calls `/api/...`; behind a host there is no proxy to strip it, so the server does
+    rewriteUrl: (req) => { const u = req.url ?? "/"; return u === "/api" ? "/" : u.startsWith("/api/") || u.startsWith("/api?") ? u.slice(4) : u; },
+  });
   app.decorateRequest("session", null);
   app.decorateRequest("token", null);
+
+  const registration = opts.registration ?? "open";
+  const rl = opts.rateLimit ? (opts.rateLimit === true ? {} : opts.rateLimit) : null;
+  const windowMs = rl?.windowMs ?? 15 * 60_000;
+  const limits = rl && { email: new RateLimiter(rl.loginPerEmail ?? 8, windowMs), ip: new RateLimiter(rl.loginPerIp ?? 40, windowMs), register: new RateLimiter(rl.registerPerIp ?? 5, 60 * 60_000) };
+  const limited = (r: { ok: boolean; retryAfterSec: number }, reply: import("fastify").FastifyReply, what: string) => {
+    if (r.ok) return;
+    reply.header("retry-after", String(r.retryAfterSec));
+    throw new HttpError(429, "too_many_attempts", `Too many ${what}. Try again in ${minutes(r.retryAfterSec)}.`);
+  };
+
+  if (opts.secureHeaders) {
+    app.addHook("onSend", async (req, reply) => {
+      for (const [k, v] of Object.entries(SECURITY_HEADERS)) reply.header(k, v);
+      if (req.protocol === "https") reply.header("strict-transport-security", "max-age=31536000");
+    });
+  }
+
+  if (opts.webDir) {
+    const web = webHandler(opts.webDir);
+    app.setNotFoundHandler((req, reply) => {
+      const isApi = (req as any).originalUrl?.startsWith("/api/") || (req as any).originalUrl === "/api";
+      if (isApi || (req.method !== "GET" && req.method !== "HEAD")) return reply.status(404).send({ error: { code: "not_found", message: "Not found." } });
+      return web(req, reply);
+    });
+  }
 
   // a workbook upload arrives as raw bytes
   app.addContentTypeParser(["application/octet-stream", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"], { parseAs: "buffer", bodyLimit: 50 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
   app.addHook("preHandler", async (req) => {
-    if (PUBLIC.has(req.url.split("?")[0]!)) return;
+    if (req.is404 || PUBLIC.has(req.url.split("?")[0]!)) return; // an unknown address is the web app's (or a plain 404), not a protected route
     const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? "");
     const session = m ? await accounts.sessionFor(db, m[1]!) : null;
     if (!session) throw new HttpError(401, "unauthorised", "Sign in to continue.");
@@ -67,22 +118,40 @@ export function buildApp(db: Db): FastifyInstance {
     if (err instanceof HttpError) return reply.status(err.status).send({ error: { code: err.code, message: err.message } });
     if (err instanceof ZodError) return reply.status(400).send({ error: { code: "bad_request", message: err.message } });
     if (err?.statusCode && err.statusCode < 500) return reply.status(err.statusCode).send({ error: { code: err.code ?? "bad_request", message: err.message } });
+    // two people doing the same thing at once on a real Postgres: the unique rule that decides it is the answer, not a crash
+    if (err?.code === "23505") return reply.status(409).send({ error: { code: "conflict", message: "That already exists, or someone else just added it. Refresh and look again." } });
+    if (err?.code === "40001" || err?.code === "40P01") return reply.status(503).send({ error: { code: "busy", message: "The database was busy with someone else's change. Try again." } });
     console.error(err);
     return reply.status(500).send({ error: { code: "server_error", message: "Something went wrong on our side." } });
   });
 
   const ctx = (req: FastifyRequest): Ctx => ({ userId: req.session!.userId, orgId: req.session!.orgId, role: req.session!.role });
 
-  app.get("/health", async () => ({ ok: true }));
+  // for a host's "is it up" check: it also proves the database answers
+  app.get("/health", async (_req, reply) => {
+    try { await db.query("select 1"); } catch { return reply.status(503).send({ ok: false }); }
+    return { ok: true };
+  });
 
   // ---- accounts
+  const registrationOpen = async () => registration === "open" || (registration === "first" && (await db.query("select 1 from organisations limit 1")).rows.length === 0);
+  app.get("/auth/status", async () => ({ registration: await registrationOpen() }));
   app.post("/auth/register", async (req, reply) => {
+    if (!(await registrationOpen())) throw new HttpError(403, "registration_closed", "New companies are set up by the Blackline administrator. Ask them to add yours.");
+    if (limits) limited(limits.register.hit(req.ip), reply, "sign-up attempts");
     const v = parse(z.object({ orgName: z.string().trim().min(1).max(120), name: z.string().trim().min(1).max(120), email: z.email(), password: z.string().min(1).max(200) }), req.body);
     return reply.status(201).send(await accounts.registerOrganisation(db, v));
   });
-  app.post("/auth/login", async (req) => {
+  app.post("/auth/login", async (req, reply) => {
     const v = parse(z.object({ email: z.email(), password: z.string().min(1).max(200), orgId: id.optional() }), req.body);
-    return accounts.login(db, v);
+    const emailKey = v.email.trim().toLowerCase();
+    if (limits) {
+      limited(limits.ip.hit(req.ip), reply, "sign-in attempts");
+      limited(limits.email.hit(emailKey), reply, "sign-in attempts for this email");
+    }
+    const r = await accounts.login(db, v);
+    limits?.email.reset(emailKey); // getting in clears that person's count
+    return r;
   });
   app.post("/auth/logout", async (req, reply) => {
     await accounts.logout(db, req.token!);

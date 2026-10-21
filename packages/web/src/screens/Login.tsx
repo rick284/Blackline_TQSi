@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { api, ApiError } from "../api.js";
 import { useSession } from "../session.js";
 
@@ -9,6 +9,11 @@ export function Login() {
   const [choose, setChoose] = useState<{ orgId: string; name: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // a hosted Blackline lets only its first company sign up (the rest are added by the administrator), so the tab shows only when the server says it is open
+  const [canRegister, setCanRegister] = useState(false);
+  useEffect(() => {
+    api("GET", "/auth/status").then((r) => setCanRegister(!!r.registration), () => setCanRegister(false));
+  }, []);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 
   async function submit(e: FormEvent, orgId?: string) {
@@ -41,10 +46,12 @@ export function Login() {
   return (
     <div className="signin">
       <h1>Blackline</h1>
-      <div className="tabs">
-        <button className={mode === "in" ? "on" : ""} onClick={() => { setMode("in"); setError(null); }}>Sign in</button>
-        <button className={mode === "register" ? "on" : ""} onClick={() => { setMode("register"); setError(null); }}>New company</button>
-      </div>
+      {canRegister && (
+        <div className="tabs">
+          <button className={mode === "in" ? "on" : ""} onClick={() => { setMode("in"); setError(null); }}>Sign in</button>
+          <button className={mode === "register" ? "on" : ""} onClick={() => { setMode("register"); setError(null); }}>New company</button>
+        </div>
+      )}
       <form onSubmit={submit}>
         {mode === "register" && (
           <>

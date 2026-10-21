@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addPerson, jobWithEstimate, newCompany, testServer, type TestServer } from "./helpers.js";
+import { addPerson, jobWithEstimate, newCompany, testServer, refuses, pgStandIn, type TestServer } from "./helpers.js";
 
 let s: TestServer;
 beforeAll(async () => { s = await testServer(); });
@@ -77,15 +77,15 @@ describe("a revision is frozen", () => {
     expect(now.data.body.jobRateOverride).toBe("99999");
   });
 
-  it("is refused by the database itself if anyone tries to edit, delete or re-supersede it", async () => {
+  it.skipIf(pgStandIn)("is refused by the database itself if anyone tries to edit, delete or re-supersede it", async () => {
     const t = await ready("Guarded Co");
     const a = (await t.mgr.post(`/jobs/${t.jobId}/revisions`, {})).body;
     const b = (await t.mgr.post(`/jobs/${t.jobId}/revisions`, {})).body;
-    await expect(s.db.query("update tender_revisions set snapshot = '[]'::jsonb where id = $1", [a.id])).rejects.toThrow(/cannot be edited/);
-    await expect(s.db.query("update tender_revisions set label = 'Rev Z' where id = $1", [a.id])).rejects.toThrow(/cannot be edited/);
-    await expect(s.db.query("update tender_revisions set totals = '{}'::jsonb where id = $1", [b.id])).rejects.toThrow(/cannot be edited/);
-    await expect(s.db.query("delete from tender_revisions where id = $1", [a.id])).rejects.toThrow(/cannot be deleted/);
-    await expect(s.db.query("update tender_revisions set superseded_by = $1 where id = $2", [a.id, a.id])).rejects.toThrow(/already been superseded/);
+    await refuses(s.db.query("update tender_revisions set snapshot = '[]'::jsonb where id = $1", [a.id]), /cannot be edited/);
+    await refuses(s.db.query("update tender_revisions set label = 'Rev Z' where id = $1", [a.id]), /cannot be edited/);
+    await refuses(s.db.query("update tender_revisions set totals = '{}'::jsonb where id = $1", [b.id]), /cannot be edited/);
+    await refuses(s.db.query("delete from tender_revisions where id = $1", [a.id]), /cannot be deleted/);
+    await refuses(s.db.query("update tender_revisions set superseded_by = $1 where id = $2", [a.id, a.id]), /already been superseded/);
     // the only change a row ever takes is being superseded: B can be, once
     const c = (await t.mgr.post(`/jobs/${t.jobId}/revisions`, {})).body;
     expect(c.label).toBe("Rev C");

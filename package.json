@@ -5,6 +5,7 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "test": "vitest run",
+    "test:pg": "node tools/test-pg.mjs",
     "typecheck": "tsc -b packages/engine packages/checkout packages/tender packages/server packages/web"
   },
   "devDependencies": {

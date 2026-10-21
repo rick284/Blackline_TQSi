@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.claude
+private
+**/dist
+**/*.log
+.env
+.env.*
+!.env.example
+docs
+*.md
+!packages/**/README.md

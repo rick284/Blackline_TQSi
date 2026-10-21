@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { splitIntoPackages } from "@blackline/tender";
 import * as jobs from "../src/repo/jobs.js";
-import { Client, ctxOf, jobWithEstimate, newCompany, testServer, tiny, type TestServer } from "./helpers.js";
+import { Client, ctxOf, jobWithEstimate, newCompany, testServer, refuses, pgStandIn, tiny, type TestServer } from "./helpers.js";
 
 let s: TestServer;
 beforeAll(async () => { s = await testServer(); });
@@ -87,12 +87,12 @@ describe("company isolation", () => {
     expect((await a.owner.get(`/jobs/${jobId}`)).status).toBe(200);
   });
 
-  it("is enforced by the database too: a package cannot point at another company's job", async () => {
+  it.skipIf(pgStandIn)("is enforced by the database too: a package cannot point at another company's job", async () => {
     const { b, jobId } = await twoCompanies();
-    await expect(s.db.query("insert into packages (org_id, job_id, key, name, kind) values ($1, $2, 'x', 'x', 'x')", [b.orgId, jobId])).rejects.toThrow();
+    await refuses(s.db.query("insert into packages (org_id, job_id, key, name, kind) values ($1, $2, 'x', 'x', 'x')", [b.orgId, jobId]), /./);
     const pkg = (await s.db.query<{ id: string }>("select id from packages where job_id = $1 limit 1", [jobId])).rows[0]!;
-    await expect(s.db.query("insert into package_records (package_id, org_id, record_id, data) values ($1, $2, 'x', '{}')", [pkg.id, b.orgId])).rejects.toThrow();
-    await expect(s.db.query("insert into locks (package_id, org_id, holder) values ($1, $2, $3)", [pkg.id, b.orgId, b.userId])).rejects.toThrow();
+    await refuses(s.db.query("insert into package_records (package_id, org_id, record_id, data) values ($1, $2, 'x', '{}')", [pkg.id, b.orgId]), /./);
+    await refuses(s.db.query("insert into locks (package_id, org_id, holder) values ($1, $2, $3)", [pkg.id, b.orgId, b.userId]), /./);
   });
 
   it("scopes a session to its company: a sign-in cannot be pointed at a company the person is not in", async () => {

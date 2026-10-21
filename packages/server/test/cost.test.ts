@@ -1,7 +1,7 @@
 import { costControl as K } from "@blackline/tender";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ledgerOf, costData } from "../src/repo/cost.js";
-import { ctxOf, addPerson, jobWithEstimate, newCompany, testServer, type TestServer } from "./helpers.js";
+import { ctxOf, addPerson, jobWithEstimate, newCompany, testServer, refuses, type TestServer } from "./helpers.js";
 
 let s: TestServer;
 beforeAll(async () => { s = await testServer(); });
@@ -67,10 +67,10 @@ describe("commitments and actual costs", () => {
     expect((await t.summary()).project.actualCostToDate.toString()).toBe("0");
     const kept = (await t.owner.get(`/jobs/${t.jobId}/cost`)).body.actuals[0];
     expect([kept.voided, kept.voidReason]).toEqual([true, "Booked to the wrong job"]);
-    await expect(s.db.query("update cost_actuals set amount = '1.00' where id = $1", [a.id])).rejects.toThrow(/voided entry cannot be changed|cannot be edited/);
-    await expect(s.db.query("delete from cost_actuals where id = $1", [a.id])).rejects.toThrow(/cannot be deleted/);
+    await refuses(s.db.query("update cost_actuals set amount = '1.00' where id = $1", [a.id]), /voided entry cannot be changed|cannot be edited/);
+    await refuses(s.db.query("delete from cost_actuals where id = $1", [a.id]), /cannot be deleted/);
     const b = (await t.est.post(`/jobs/${t.jobId}/cost/actuals`, { code: "EW01", kind: "invoice", amount: "500", date: day })).body;
-    await expect(s.db.query("update cost_actuals set amount = '1.00' where id = $1", [b.id])).rejects.toThrow(/cannot be edited/);
+    await refuses(s.db.query("update cost_actuals set amount = '1.00' where id = $1", [b.id]), /cannot be edited/);
   });
 });
 
@@ -93,7 +93,7 @@ describe("variations", () => {
     expect((await t.est.post(`/jobs/${t.jobId}/cost/actuals`, { code: "VAR-01", kind: "invoice", amount: "100", date: day })).status).toBe(201); // now it is
     expect((await t.est.post(`/jobs/${t.jobId}/cost/variations/${v.id}`, { title: "Changed again", sell: "1", lines: [] })).body.error.code).toBe("variation_decided");
     expect((await t.mgr.post(`/jobs/${t.jobId}/cost/variations/${v.id}/decision`, { decision: "rejected", note: "changed my mind" })).body.error.code).toBe("variation_decided");
-    await expect(s.db.query("update cost_variations set sell = '1.00' where id = $1", [v.id])).rejects.toThrow(/decided variation cannot be changed/);
+    await refuses(s.db.query("update cost_variations set sell = '1.00' where id = $1", [v.id]), /decided variation cannot be changed/);
   });
 
   it("keeps when it was sent, when the client should reply by and whether work has started at risk, and warns when the reply is late", async () => {
@@ -150,7 +150,7 @@ describe("forecasts", () => {
     r = await t.summary();
     expect([r.lines[0]!.forecastFinal.toString(), r.lines[0]!.etcManual]).toEqual(["10000", false]);
     expect(Number((await s.db.query("select count(*)::int as n from cost_forecasts where job_id = $1", [t.jobId])).rows[0]!.n)).toBe(3);
-    await expect(s.db.query("update cost_forecasts set etc = '1.00' where job_id = $1", [t.jobId])).rejects.toThrow(/kept as entered/);
+    await refuses(s.db.query("update cost_forecasts set etc = '1.00' where job_id = $1", [t.jobId]), /kept as entered/);
   });
 });
 

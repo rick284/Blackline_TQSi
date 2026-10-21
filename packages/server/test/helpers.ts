@@ -1,7 +1,9 @@
+import { expect } from "vitest";
 import { splitIntoPackages, type TenderInputs } from "@blackline/tender";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
-import { type Db, migrate, openPglite } from "../src/db.js";
+import { createServer } from "node:net";
+import { type Db, migrate, openPg, openPglite } from "../src/db.js";
 import type { Ctx } from "../src/errors.js";
 import * as jobs from "../src/repo/jobs.js";
 
@@ -11,7 +13,33 @@ export interface TestServer {
   close(): Promise<void>;
 }
 
+const freePort = () => new Promise<number>((resolve, reject) => {
+  const s = createServer();
+  s.once("error", reject);
+  s.listen(0, "127.0.0.1", () => { const { port } = s.address() as { port: number }; s.close(() => resolve(port)); });
+});
+
+/**
+ * The same server, but on the real `pg` adapter talking Postgres's wire protocol to a PGlite socket server (set TEST_DB=pg). It proves the hosted
+ * database path: parameter handling, transactions, the types that come back, and every route's SQL, without needing a Postgres install.
+ * The socket server serves one connection at a time, so the pool is one connection wide here.
+ */
+async function pgTestServer(): Promise<TestServer> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { PGLiteSocketServer } = await import("@electric-sql/pglite-socket");
+  const lite = await PGlite.create();
+  const port = await freePort();
+  const sock = new PGLiteSocketServer({ db: lite, port, host: "127.0.0.1" });
+  await sock.start();
+  const db = await openPg(`postgres://postgres:postgres@127.0.0.1:${port}/postgres`, { max: 1 });
+  await migrate(db);
+  const app = buildApp(db);
+  await app.ready();
+  return { app, db, close: async () => { await app.close(); await db.close(); await sock.stop(); await lite.close(); } };
+}
+
 export async function testServer(): Promise<TestServer> {
+  if (process.env.TEST_DB === "pg") return pgTestServer();
   const db = await openPglite();
   await migrate(db);
   const app = buildApp(db);
@@ -89,4 +117,16 @@ export async function jobWithEstimate(s: TestServer, owner: Client, name = "Test
   const pkgs = (await owner.get(`/jobs/${jobId}/packages`)).body as { id: string; key: string }[];
   const byKey = Object.fromEntries(pkgs.map((p) => [p.key, p.id]));
   return { jobId, byKey };
+}
+
+/**
+ * Assert that the database itself refuses a statement (a trigger, a constraint). On Postgres, and on PGlite, the error carries the trigger's own words,
+ * so `message` is checked. The PGlite socket stand-in used for TEST_DB=pg resets the connection on a SQL error instead of reporting it, so there the
+ * refusal itself is the check.
+ */
+export const pgStandIn = process.env.TEST_DB === "pg";
+
+export async function refuses(p: Promise<unknown>, message: RegExp): Promise<void> {
+  if (process.env.TEST_DB === "pg") { await expect(p).rejects.toBeTruthy(); return; }
+  await expect(p).rejects.toThrow(message);
 }
