@@ -57,7 +57,8 @@ const letter = (seq: number) => submission.revisionLabel(seq);
 export async function issueRevision(db: Db, ctx: Ctx, jobId: string, o: { note?: string; overrideReason?: string }): Promise<RevisionSummary> {
   requireRole(ctx, "manager");
   return db.tx(async (t) => {
-    await getJob(t, ctx, jobId);
+    const job = await getJob(t, ctx, jobId);
+    if (job.status === "awarded") throw new HttpError(409, "awarded", "This job has been awarded, so its tender can't be issued again. Changes to the work from here are variations.");
     const pkgs = await listPackages(t, ctx, jobId);
     const held = pkgs.filter((p) => p.lock);
     if (held.length) throw new HttpError(409, "packages_checked_out", `Everything has to be checked in before a tender is issued. Still checked out: ${held.map((p) => `${p.name} (${p.lock!.holder_name})`).join(", ")}.`);

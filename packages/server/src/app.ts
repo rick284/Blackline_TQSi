@@ -8,6 +8,7 @@ import { listAudit } from "./repo/audit.js";
 import * as co from "./repo/checkout.js";
 import { computeJobEstimate } from "./repo/estimate.js";
 import * as contacts from "./repo/contacts.js";
+import * as contracts_ from "./repo/contracts.js";
 import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
 import * as revisions from "./repo/revisions.js";
@@ -170,6 +171,15 @@ export function buildApp(db: Db): FastifyInstance {
     const r = await jobs.ensurePackage(db, ctx(req), jobId, procurement.procurementPackage(inputs.quotes ?? [], inputs.overlays ?? []));
     return reply.status(r.created ? 201 : 200).send(r);
   });
+
+  // award: the contract, its terms and the control budget copied from an issued revision
+  app.get("/jobs/:jobId/contract", async (req) => ({ contract: await contracts_.getContract(db, ctx(req), idParam((req.params as any).jobId)) }));
+  app.post("/jobs/:jobId/award", async (req, reply) => {
+    const v = parse(z.object({ revisionId: id, contractSum: z.string().max(40).optional(), awardedOn: z.string().max(10).optional(), terms: z.record(z.string(), z.string().max(2000)).optional() }), req.body);
+    return reply.status(201).send(await contracts_.awardJob(db, ctx(req), idParam((req.params as any).jobId), v));
+  });
+  app.post("/jobs/:jobId/contract", async (req) =>
+    contracts_.updateTerms(db, ctx(req), idParam((req.params as any).jobId), parse(z.record(z.string(), z.string().max(2000)), req.body)));
 
   // issued revisions: frozen, never edited, only superseded
   app.get("/jobs/:jobId/revisions", async (req) => revisions.listRevisions(db, ctx(req), idParam((req.params as any).jobId)));

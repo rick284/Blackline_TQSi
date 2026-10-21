@@ -240,6 +240,11 @@ table.reg td { vertical-align: top; }
 table.reg tr.new td { background: var(--panel); }
 table.reg tr.closed td { color: var(--muted); }
 table.reg tr.hist td { background: var(--panel); }
+table.reg tr.grp td { background: var(--panel); }
+table.reg tr.total td { background: var(--header); font-weight: 600; }
+table.reg tr.sub td { color: var(--muted); }
+.docs .sub-form select, .docs .sub-form input:not([type="checkbox"]), .docs .sub-form textarea { font: inherit; border: 1px solid var(--line-strong); border-radius: 0; padding: 3px 6px; background: var(--paper); width: 100%; box-sizing: border-box; min-height: 24px; }
+.docs .sub-form input:disabled, .docs .sub-form select:disabled, .docs .sub-form textarea:disabled { background: var(--calc); color: var(--ink); }
 table.reg .hist .chg { margin-left: 10px; }
 table.reg .acts { display: flex; gap: 4px; }
 table.reg .why { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
