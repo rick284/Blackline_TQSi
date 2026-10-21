@@ -20,5 +20,10 @@ Built:
 
 Known difference from QSi: QSi rounds with Python floats, so an exact half cent (5% of 36,902.50) rounds down there and up here. 11 cases differ by 1 to 2 cents for that reason (`HALF_CENT_TIES` in the fixture test). Everything else matches exactly.
 
-Not yet ported from QSi: variations, full-potential scenario, commercial control (budget, actuals, claims, retentions), QSi Pro (rick284/tender-estimating-platform) additions.
+Also ported from QSi, with hand-checked tests (`test/commercial.test.ts`):
+- `scenarios.ts`: full-potential scenario, inline variations (inherit base %s, never register risk), estimate summary, current contract value.
+- `commercial.ts`: budget line forecast and status, project summary and margins, earned value, programme summary.
+- `payments.ts`: zone and task allocation (last absorbs rounding), deposit, stages, final payment, retention and cap, schedule reconciliation.
+
+Not yet ported from QSi: warning generators (variation, claim, programme, margin drop), QSi Pro (rick284/tender-estimating-platform) additions. QSi's own commercial and payment test files (backend/tests) are not yet used as golden cases.
 Next: check against the Eastglen and Hobsonville spreadsheets, then the data model and server, then Rate Library and Estimate screens.
