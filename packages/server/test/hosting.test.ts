@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { buildApp, type AppOptions } from "../src/app.js";
+import { buildApp, clientIp, type AppOptions } from "../src/app.js";
 import { flags, run } from "../src/admin.js";
 import { type Db, migrate, openPglite } from "../src/db.js";
 import { RateLimiter } from "../src/ratelimit.js";
@@ -56,6 +56,16 @@ describe("who can start a company", () => {
   });
 });
 
+describe("clientIp", () => {
+  it("counts from the proxy end of X-Forwarded-For", () => {
+    expect(clientIp("9.9.9.9, 203.0.113.5", "10.0.0.1", 1)).toBe("203.0.113.5");
+    expect(clientIp("9.9.9.9, 203.0.113.5, 10.1.1.1", "10.0.0.1", 2)).toBe("203.0.113.5");
+    expect(clientIp("203.0.113.5", "10.0.0.1", 2)).toBe("203.0.113.5"); // fewer entries than proxies: the first one
+    expect(clientIp("9.9.9.9", "10.0.0.1", 0)).toBe("10.0.0.1");        // no proxy: a header means nothing
+    expect(clientIp(undefined, "10.0.0.1", 1)).toBe("10.0.0.1");
+  });
+});
+
 describe("rate limiting", () => {
   it("slows guessing one person's password, and a good sign-in clears the count", async () => {
     const d = await openPglite(); await migrate(d);
@@ -72,6 +82,16 @@ describe("rate limiting", () => {
     expect(blocked.body.error.message).toMatch(/Try again in/);
     // even the right password waits
     expect((await c.post("/auth/login", { email: "lee@lim.test", password: PASSWORD })).status).toBe(429);
+    await app.close(); await d.close();
+  });
+
+  it("counts the address the host's proxy saw, not one a visitor made up", async () => {
+    const d = await openPglite(); await migrate(d);
+    const app = buildApp(d, { rateLimit: { registerPerIp: 1 }, trustProxy: 1 }); await app.ready();
+    const go = (fwd: string, n: string) => app.inject({ method: "POST", url: "/auth/register", headers: { "x-forwarded-for": fwd }, payload: { orgName: n, name: "N", email: `${n}@x.test`, password: PASSWORD } });
+    expect((await go("9.9.9.9, 203.0.113.5", "a")).statusCode).toBe(201);
+    expect((await go("8.8.8.8, 203.0.113.5", "b")).statusCode).toBe(429); // same real visitor, different made-up first entry
+    expect((await go("8.8.8.8, 203.0.113.6", "c")).statusCode).toBe(201); // a different real visitor
     await app.close(); await d.close();
   });
 

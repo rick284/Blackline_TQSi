@@ -61,21 +61,33 @@ export interface AppOptions {
   webDir?: string;
   registration?: "open" | "first" | "closed";
   rateLimit?: boolean | { loginPerEmail?: number; loginPerIp?: number; registerPerIp?: number; windowMs?: number };
-  trustProxy?: boolean;
+  trustProxy?: boolean | number;
   secureHeaders?: boolean;
 }
 
+/**
+ * The visitor's address when `hops` proxies sit in front of the server. Each proxy adds the address it saw to the END of X-Forwarded-For, so the
+ * visitor is `hops` entries from the right; anything a visitor writes themselves sits further left and is ignored. With no proxy it is the socket's.
+ */
+export function clientIp(forwardedFor: string | string[] | undefined, socketIp: string, hops: number): string {
+  if (hops <= 0) return socketIp;
+  const list = String(Array.isArray(forwardedFor) ? forwardedFor.join(",") : forwardedFor ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return list[Math.max(0, list.length - hops)] ?? socketIp;
+}
+
 export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
+  const hops = opts.trustProxy === true ? 1 : opts.trustProxy || 0;
   const app = Fastify({
     logger: false,
     bodyLimit: 5 * 1024 * 1024,
-    trustProxy: opts.trustProxy ?? false,
+    trustProxy: hops > 0, // (for the https check; the visitor's address is worked out below, counting from the proxy end)
     // the web app calls `/api/...`; behind a host there is no proxy to strip it, so the server does
     rewriteUrl: (req) => { const u = req.url ?? "/"; return u === "/api" ? "/" : u.startsWith("/api/") || u.startsWith("/api?") ? u.slice(4) : u; },
   });
   app.decorateRequest("session", null);
   app.decorateRequest("token", null);
 
+  const ipOf = (req: FastifyRequest) => clientIp(req.headers["x-forwarded-for"], req.socket.remoteAddress ?? "", hops);
   const registration = opts.registration ?? "open";
   const rl = opts.rateLimit ? (opts.rateLimit === true ? {} : opts.rateLimit) : null;
   const windowMs = rl?.windowMs ?? 15 * 60_000;
@@ -138,7 +150,7 @@ export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
   app.get("/auth/status", async () => ({ registration: await registrationOpen() }));
   app.post("/auth/register", async (req, reply) => {
     if (!(await registrationOpen())) throw new HttpError(403, "registration_closed", "New companies are set up by the Blackline administrator. Ask them to add yours.");
-    if (limits) limited(limits.register.hit(req.ip), reply, "sign-up attempts");
+    if (limits) limited(limits.register.hit(ipOf(req)), reply, "sign-up attempts");
     const v = parse(z.object({ orgName: z.string().trim().min(1).max(120), name: z.string().trim().min(1).max(120), email: z.email(), password: z.string().min(1).max(200) }), req.body);
     return reply.status(201).send(await accounts.registerOrganisation(db, v));
   });
@@ -146,7 +158,7 @@ export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
     const v = parse(z.object({ email: z.email(), password: z.string().min(1).max(200), orgId: id.optional() }), req.body);
     const emailKey = v.email.trim().toLowerCase();
     if (limits) {
-      limited(limits.ip.hit(req.ip), reply, "sign-in attempts");
+      limited(limits.ip.hit(ipOf(req)), reply, "sign-in attempts");
       limited(limits.email.hit(emailKey), reply, "sign-in attempts for this email");
     }
     const r = await accounts.login(db, v);

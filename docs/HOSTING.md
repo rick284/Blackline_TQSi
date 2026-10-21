@@ -1,6 +1,6 @@
 # Hosting Blackline
 
-Blackline runs as **one program** (the server, which also serves the web app) plus **one Postgres database**. Any host that can run a container (or a Node program) and gives you a Postgres database will do. Nothing here has been deployed yet: the choice of host is still to be made (see "Choosing a host" at the end).
+Blackline runs as **one program** (the server, which also serves the web app) plus **one Postgres database**. Any host that can run a container (or a Node program) and gives you a Postgres database will do. Nothing here has been deployed yet. The plan is **Render** (server and database, Singapore region) with **Netlify** optionally in front; the steps are under "Deploying to Render (and Netlify)".
 
 ## What you need
 
@@ -17,7 +17,7 @@ Set these as environment variables in the host's settings page (`.env.example` l
 | `NODE_ENV=production` | Turns on hosted mode: needs `DATABASE_URL`, limits sign-in attempts, sends security headers, signs up only the first company. |
 | `DATABASE_URL` | The Postgres address. Add `?sslmode=require` if the host wants an encrypted connection. |
 | `REGISTRATION` | `first` (default when hosted): the very first person to open the site creates the company and becomes its owner, then sign-up closes. `closed`: nobody; use the admin tool. `open`: anyone (not recommended on the internet). |
-| `TRUST_PROXY=1` | The host puts its own front door in front of the program, so believe the visitor address it passes on. Leave it on with a host's own web address. |
+| `TRUST_PROXY` | How many proxies sit between the visitor and the program: `1` for the host's own front door (Render alone), `2` when Netlify is in front of Render. The program takes the visitor's address that many entries from the right of `X-Forwarded-For`, so a visitor can't make up an address. A wrong count only weakens the per-address sign-in limit (too low: everyone looks like one visitor; too high: an address can be faked); the per-email limit still works. Not yet checked against Render's real headers. |
 | `PORT` | Usually set by the host. |
 
 The database tables are created and updated by the program itself the first time it starts and whenever a new version adds one. Several copies starting at once is safe.
@@ -73,9 +73,35 @@ Not done yet (matters once real people depend on it):
 
 Push to the branch the host watches, or trigger a deploy. The host starts the new copy, waits for `/health` to answer (it checks the database too), then stops the old one. The program applies any new database changes itself on start, each in one step that is undone if it fails, and never replays one it has already applied. Every change so far only adds (tables, columns, rules); read any future one before deploying it to real data, and take a backup first.
 
-## Choosing a host
+## Deploying to Render (and Netlify)
 
-Not chosen yet. What to compare, in order of importance: an Australian region for both the program and the database; automatic daily backups with restore on the database plan; the monthly price for a small always-on instance (avoid plans that "sleep" when idle, the first request after a sleep takes a minute); whether the database can be reached from your own computer for backups; and whether you can use your own web address. A small setup of this kind typically costs in the order of tens of dollars a month; get the exact figure from the host's current price page.
+Decided: **Render, Singapore region** (Render has no Sydney or NZ region; Singapore is the nearest it offers). Fine for a first, internal trial. **Before real client estimates go in, decide whether your contracts allow data outside Australia/NZ**; moving later means copying the database (`pg_dump` then `pg_restore`) to a new host and changing `DATABASE_URL`. The older Render services (`blackline-api`, `tender-platform-api`, both Oregon) are left running and untouched: everything below creates new things with new names.
+
+### A. The server and database on Render
+
+`render.yaml` in the repository describes both (a "blueprint"): service `blackline-tqsi` (Docker, Singapore, `starter` plan so it stays awake) and database `blackline-tqsi-db` (Singapore, `basic-256mb`, a paid plan, which includes point-in-time restore).
+
+1. In Render: **Blueprints → New Blueprint Instance**, pick the `Blackline_TQSi` GitHub repository and the `feat/foundations` branch (or `main` once merged). Render reads `render.yaml` and shows what it will create and the monthly cost. Check it names only the two new things, then approve.
+2. Wait for the first build (several minutes). Open the service's **Logs**: you want `Applied migrations: ...` then `Blackline server listening ...`.
+3. Open the service's address (`https://blackline-tqsi.onrender.com`, or whatever Render shows if that name was taken). It already serves the whole app. Create your company on the sign-in page (**New company**), then reload: the tab is gone.
+4. Updates: `autoDeploy` is off, so a push to GitHub changes nothing live. Press **Manual Deploy** on the service when you want a new version.
+
+Check the plan names and prices on Render's screen in step 1 before approving: they change, and if Render rejects a plan name in `render.yaml`, pick the nearest plan in the screen or edit the file. The 256 MB database is the smallest paid size: fine to start, watch its storage and memory on the database's **Metrics** tab and move up a size when needed. The `starter` server has 512 MB of memory; if big workbook imports make it restart, move up a size.
+
+### B. Netlify in front (optional)
+
+Not needed to use Blackline: the Render address above works on its own. Use Netlify if you want its address, a custom domain handled there, or the web files served from its network.
+
+1. Edit `netlify.toml`: replace `RENDER_ADDRESS` with the server's address without `https://` (for example `blackline-tqsi.onrender.com`). Commit and push.
+2. In Netlify: **Add new site → Import from Git**, pick the repository. The build command and folder come from `netlify.toml`.
+3. On Render, change the service's `TRUST_PROXY` to `2` (two proxies now: Netlify and Render).
+4. Open the Netlify address and sign in. The browser talks only to Netlify; it passes `/api/...` on to Render.
+
+Two limits to know: Netlify gives up on a proxied request that takes longer than about half a minute, so a very large workbook import could fail through Netlify (use the Render address directly for imports if it does); and the offline service worker has not been exercised on a hosted build at all (the browser pane used for testing here can't run service workers), so test going offline once on the real address.
+
+### C. Costs and what to compare if you move
+
+Check Render's and Netlify's current price pages: the server and database are the paid parts (an always-on server plus a paid database is typically tens of dollars a month), and Netlify's free plan is usually enough for the web files. If you move host later, compare in this order: an Australian or NZ region for both program and database; automatic daily backups with restore; a plan that doesn't sleep when idle; and database access from your own computer for backups.
 
 ## Testing without a host
 

@@ -13,7 +13,7 @@ import { type Db, migrate, openPg, openPglite } from "./db.js";
  *   PORT, HOST             where to listen (hosted: 3000 on 0.0.0.0)
  *   WEB_DIR                the built web app (default: packages/web/dist next to this package)
  *   REGISTRATION           open | first | closed: who can start a new company (hosted default: first)
- *   TRUST_PROXY=1          the server sits behind the host's proxy: believe the address it forwards
+ *   TRUST_PROXY=1          how many proxies sit in front of the server (the host's own = 1; behind Netlify too = 2): believe the address they forward
  *   DATA_DIR, SEED_DEMO    development only: keep the PGlite database on disk; load the demo company
  */
 const env = process.env;
@@ -59,7 +59,8 @@ const app = buildApp(db, {
   webDir,
   registration,
   rateLimit: production,
-  trustProxy: env.TRUST_PROXY === "1",
+  // a number of proxies in front (1 = the host's own; 2 = the host behind Netlify), so a visitor can't pass off a made-up address of their own
+  trustProxy: Number(env.TRUST_PROXY) > 0 ? Number(env.TRUST_PROXY) : false,
   secureHeaders: production || !!webDir,
 });
 const port = Number(env.PORT ?? 3000);

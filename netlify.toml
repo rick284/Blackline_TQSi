@@ -1,0 +1,35 @@
+# Optional front door on Netlify: it serves the built web app and passes /api/... through to the Blackline server on Render,
+# so the browser still talks to one address. Change RENDER_ADDRESS below to your server's address (shown on its Render page).
+# See docs/HOSTING.md. (The server on Render also serves the web app by itself, so this file is only needed to use Netlify's address or your own domain.)
+[build]
+  command = "npm run build -w @blackline/web"
+  publish = "packages/web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# the API: a "rewrite" (status 200) keeps the address in the browser unchanged
+[[redirects]]
+  from = "/api/*"
+  to = "https://RENDER_ADDRESS/api/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

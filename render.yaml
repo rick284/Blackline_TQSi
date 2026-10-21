@@ -1,0 +1,29 @@
+# Render blueprint: the Blackline server (which also serves the web app) and its Postgres database, both in Singapore.
+# Creates NEW things only (blackline-tqsi, blackline-tqsi-db); it does not touch your older services. See docs/HOSTING.md.
+databases:
+  - name: blackline-tqsi-db
+    region: singapore
+    plan: basic-256mb        # a paid plan: includes point-in-time restore. Free plans expire and have no backups.
+    databaseName: blackline
+    user: blackline
+
+services:
+  - type: web
+    name: blackline-tqsi
+    runtime: docker
+    region: singapore
+    plan: starter            # always on (the free plan sleeps when idle). Move up a size if the memory graph runs high.
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: false        # you press "Deploy" yourself, so a push to GitHub never changes the live system by surprise
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REGISTRATION
+        value: first
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blackline-tqsi-db
+          property: connectionString
