@@ -56,7 +56,15 @@ Built and tested: the scheduling engine (calendars, FS/SS/FF/SF with lag, all ei
 
 **Not verified:** an exported file has not been opened in MS Project itself. It is well-formed, in Microsoft's namespace, in schema order, and reads back identically in Blackline, but only MS Project can say it is happy. Rick to try one and report anything it says.
 
-Not built yet (Stage 2 onward in the plan above): resource sheet and assignments screens (the data round-trips through the file but has no screen), calendar editor, columns chooser, sort/filter/group, tracking Gantt, split tasks, manual scheduling, percentage lags, baselines 1-10, recurring calendar exceptions, printing, network diagram, timeline view, reports, linking cost loading to the estimate.
+**Stage 2 (2026-10-22), built and tested:**
+- **Views** (View tab > Views): Gantt Chart, Resource Sheet, Calendars.
+- **Resource Sheet**: add, edit and delete resources (Work / Material / Cost, initials, max units, standard rate); work, cost, task count, peak units and an Over-allocated flag per resource (peak units at once against max units); the tasks a selected resource is on. Resources go on tasks in the Resource Names column or in Task Information (`Digger, Labourer[50%]`; a name that isn't a resource becomes one). Work = duration x units, cost = work x rate (Work), units x rate (Material/Cost). Assignments don't change the schedule (fixed-duration tasks).
+- **Calendars** (Change Working Time): working times per weekday, exceptions (holidays, shutdowns, working Saturdays), new calendar as a copy, rename, delete (not the project's or one a task uses), project calendar, hours per day / week. Changing a calendar reschedules the project.
+- **Columns**: 26 MS Project columns (ID, WBS, Task Name, Duration, Start, Finish, Predecessors, % Complete, Resource Names, Work, Cost, slack, critical, constraint, deadline, late dates, baseline and variances, calendar, active, notes), chosen and ordered in a docked panel; adjustable divider between table and chart.
+- **Sort**: click a heading (ascending, descending, off) or View > Sort by; sorts within each summary so the outline is kept; Sort by ID restores. **Filter**: All, Critical, Milestones, Summary, Incomplete, Completed, Late, Slipping, Inactive, Using Resource, Date Range, plus a text find; summaries stay above what matches.
+- Columns, sort, filter, zoom and table width are the person's own view, kept on this computer per job (not in the plan).
+
+Not built yet: tracking Gantt, split tasks, manual scheduling, effort-driven scheduling and task types, resource usage view and levelling, percentage lags, baselines 1-10, recurring calendar exceptions, group by, custom fields, printing, network diagram, timeline view, reports, linking cost loading to the estimate.
 
 ## Rules this module must keep
 

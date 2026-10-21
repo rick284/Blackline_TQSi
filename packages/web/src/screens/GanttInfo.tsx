@@ -1,5 +1,6 @@
 import { gantt as G } from "@blackline/tender/core";
 import { formatDate, formatDuration, formatLinks, parseDate, parseDuration, parseLinks } from "../lib/gantt.js";
+import { formatAssignments } from "../lib/ganttResources.js";
 
 type Edit = (uid: number, fn: (t: G.GTask) => G.GTask | string) => void;
 
@@ -11,6 +12,8 @@ interface Props {
   idOf: (uid: number) => number | undefined;
   uidOf: (id: number) => number | undefined;
   onEdit: Edit;
+  /** Put exactly these resources on the task (text such as "Digger, Labourer[50%]"); returns a sentence when it can't */
+  onAssign: (uid: number, text: string) => string | null;
   onClose: () => void;
 }
 
@@ -29,7 +32,7 @@ function Txt({ label, value, onCommit, disabled, wide }: { label: string; value:
  * Task Information, docked beside the chart (not a pop-up): the same facts and settings as MS Project's Task Information box.
  * Every change goes through the same rules as the table, and says what is wrong in the page.
  */
-export function GanttInfo({ task, s, project, readOnly, idOf, uidOf, onEdit, onClose }: Props) {
+export function GanttInfo({ task, s, project, readOnly, idOf, uidOf, onEdit, onAssign, onClose }: Props) {
   const mpd = project.minutesPerDay;
   const timed = task.constraint !== "ASAP" && task.constraint !== "ALAP";
   return (
@@ -49,6 +52,10 @@ export function GanttInfo({ task, s, project, readOnly, idOf, uidOf, onEdit, onC
           <h5>Predecessors</h5>
           <Txt label="Predecessors (task, type, lag)" wide value={formatLinks(task.links, idOf, mpd)} disabled={readOnly}
             onCommit={(t) => onEdit(task.uid, (x) => { const r = parseLinks(t, uidOf, task.uid, mpd, project.minutesPerWeek); return r.ok ? { ...x, links: r.links } : r.error; })} />
+
+          <h5>Resources</h5>
+          <Txt label="Resource names (name, name[50%])" wide value={formatAssignments(task.uid, project)} disabled={readOnly || s.summary} onCommit={(t) => onAssign(task.uid, t)} />
+          {!s.summary && <p className="muted wide" style={{ gridColumn: "1 / -1", margin: 0 }}>A name that isn't a resource yet becomes one. Work: {formatDuration(Math.round(project.assignments.filter((a) => a.taskUid === task.uid).reduce((t, a) => t + s.durationMin * a.units, 0)), mpd)}.</p>}
 
           <h5>Advanced</h5>
           <label>
