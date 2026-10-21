@@ -137,3 +137,15 @@ export function computeLabourRate(raw: Record<string, unknown>): LabourResult {
     leavePct: leave.pct, productivity: new D(i.productive_hours_week).div(i.paid_hours_week), ...labourStatus(i),
   };
 }
+
+/** The library description for a built rate, worded as the policy requires (external benchmarks are marked as such). */
+export function labourDescription(i: LabourInputs): string {
+  const base = `${i.role} - true direct employment cost per productive hour`;
+  const external = i.evidence === "market normalised" || i.evidence === "comparable contractor";
+  return (external ? `${base} (external market normalised benchmark: excludes corporate overhead, profit and costs priced elsewhere)` : `${base} (excludes overhead and profit)`).slice(0, 200);
+}
+
+/** The library source line for a built rate: what it rests on and how strongly. */
+export function labourLibrarySource(i: LabourInputs, status: LabourStatus): string {
+  return `Labour build-up: ${i.evidence}, ${i.jurisdiction || "NZ"}, ${i.employment_basis}, source dated ${i.source_date}, ${status}${i.reviewer ? `, reviewed by ${i.reviewer}` : ""}`.slice(0, 300);
+}

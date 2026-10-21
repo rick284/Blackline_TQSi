@@ -78,6 +78,8 @@ export function splitIntoPackages(inputs: TenderInputs): SeedPackage[] {
 
   const lib = make("library", "Rate Library", "library");
   inputs.library.forEach((r, i) => put(lib, `library:${r.code}`, "library", r, i));
+  // a labour build lives beside the rate it produced, so one checkout covers both
+  Object.entries(inputs.labourBuilds ?? {}).forEach(([code, b], i) => put(lib, `labour:${code}`, "labourBuild", b, i));
 
   const com = make("commercial", "Commercial", "commercial");
   inputs.commercial.forEach((c, i) => put(com, `ca:${c.ref}`, "ca", c, i));
@@ -111,13 +113,18 @@ export function splitIntoPackages(inputs: TenderInputs): SeedPackage[] {
   put(set, "setting:recovery", "setting", inputs.recovery ?? 0);
   put(set, "setting:tool", "setting", inputs.tool);
   if (inputs.weatherSetup) put(set, "setting:weatherSetup", "setting", inputs.weatherSetup);
-  if (inputs.labourBuilds) put(set, "setting:labourBuilds", "setting", inputs.labourBuilds);
   put(set, "setting:reference", "setting", inputs.reference ?? null);
 
   return out;
 }
 
 const bySeq = <T extends { seq?: number }>(a: T, b: T) => (a.seq ?? 0) - (b.seq ?? 0);
+
+/** Labour builds by library code: from their own records, or (older saves) the single settings record. */
+function labourBuilds(recs: { id: string; seq?: number; body: any }[] | undefined, legacy: TenderInputs["labourBuilds"]): TenderInputs["labourBuilds"] {
+  if (!recs?.length) return legacy ?? undefined;
+  return Object.fromEntries([...recs].sort(bySeq).map((r) => [r.id.slice("labour:".length), r.body]));
+}
 
 /** Rebuild the engine inputs from stored records (any order, any packages). */
 export function assembleInputs(records: Iterable<{ id: string; data: RecordData }>): TenderInputs {
@@ -156,7 +163,7 @@ export function assembleInputs(records: Iterable<{ id: string; data: RecordData 
     quotes: list("quote"),
     scope: list("scope"),
     programme,
-    labourBuilds: settings.get("labourBuilds") ?? undefined,
+    labourBuilds: labourBuilds(of.get("labourBuild"), settings.get("labourBuilds")),
     reference,
   } as TenderInputs;
 }

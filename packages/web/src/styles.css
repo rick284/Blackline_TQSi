@@ -129,3 +129,46 @@ table.plain tr.sub td { color: var(--muted); }
 table.plain tr.picked td { background: var(--selected); }
 
 .find { height: 24px; padding: 0 8px; border: 1px solid var(--line-strong); background: var(--paper); min-width: 160px; }
+
+/* the new line in a grid: white and outlined, so it reads as a line waiting for you to fill in */
+.cell-new { background: var(--paper); box-shadow: inset 0 0 0 2px var(--black); }
+
+/* labour builder, in the page under the rate grid */
+.badge.red { background: var(--paper); border: 2px solid var(--black); font-weight: 700; line-height: 14px; }
+.builder { background: var(--panel); }
+.builder-body { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: minmax(340px, 1fr) minmax(320px, 440px); gap: 20px; padding: 10px 12px 16px; align-content: start; }
+.builder .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; align-content: start; }
+.builder .fields h5 { grid-column: 1 / -1; margin: 10px 0 0; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.builder .fields h5:first-child { margin-top: 0; }
+.builder .fields label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.builder .fields label.wide, .builder .fields p.wide { grid-column: 1 / -1; }
+.builder .fields label.check { display: flex; gap: 6px; align-items: center; align-self: end; height: 26px; color: var(--ink); }
+.builder .fields input:not([type=checkbox]), .builder .fields select { height: 26px; padding: 0 8px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); min-width: 0; }
+.builder .fields input:disabled, .builder .fields select:disabled { background: var(--calc); }
+.builder .steps .result { font-size: 13px; }
+.builder .steps .big { font-size: 22px; font-weight: 600; }
+.builder .steps h5 { margin: 14px 0 4px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.builder .steps table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line-strong); }
+.builder .steps th, .builder .steps td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.builder .steps th { background: var(--header); font-size: 11px; font-weight: 600; }
+.builder .steps .r { text-align: right; }
+.builder .steps tr.total td { background: var(--calc); font-weight: 600; }
+.builder .steps td .muted { font-size: 11px; }
+@media (max-width: 900px) { .builder-body { grid-template-columns: 1fr; } }
+
+/* scope register */
+.status-missing { background: var(--black) !important; color: var(--on-black); font-weight: 600; }
+.status-check { background: var(--selected) !important; font-weight: 600; }
+.chip { background: var(--paper); border: 1px solid var(--line-strong); padding: 0 8px; height: 20px; font-family: var(--mono); cursor: pointer; }
+.chip:hover:not(:disabled) { background: var(--header); }
+.chip:disabled { color: var(--muted); cursor: default; }
+.problems { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 5px 12px; background: var(--panel); border-top: 1px solid var(--line-strong); }
+.problems span::before { content: "\2022\00a0"; }
+.pane h3 .tabs { display: flex; gap: 0; }
+.pane h3 .tabs button { border: 1px solid var(--line-strong); background: var(--panel); padding: 0 10px; height: 20px; cursor: pointer; margin-right: -1px; font: inherit; text-transform: none; letter-spacing: 0; }
+.pane h3 .tabs button.on { background: var(--black); color: var(--on-black); border-color: var(--black); }
+.notice.wrap { flex-wrap: wrap; row-gap: 4px; }
+.notice.wrap strong { white-space: nowrap; }
+.notice .chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; max-height: 48px; overflow: auto; }
+.notice .chip { margin-left: 0; background: var(--paper); border: 1px solid var(--line-strong); text-decoration: none; padding: 0 8px; }
+.notice .chip:hover:not(:disabled) { background: var(--header); }

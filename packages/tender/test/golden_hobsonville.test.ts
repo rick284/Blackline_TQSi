@@ -45,6 +45,23 @@ describe.skipIf(!present)("Hobsonville Rev34E golden test", () => {
     cons = computeConsolidated(tender.subtotal, wb.overlays, wb.overlap, { commercial });
   });
 
+  it("reads the cover register and the quote register", () => {
+    const reg = wb.register ?? [];
+    const of = (k: string) => reg.filter((x) => x.kind === k);
+    expect([of("document").length, of("assumption").length, of("exclusion").length, of("rfi").length, of("risk").length]).toEqual([9, 9, 3, 13, 15]);
+    expect(of("document")[0]).toMatchObject({ ref: "DOC-01", title: "Plans / drawings" });
+    expect(of("assumption").map((x) => x.ref)).toEqual(["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"]);
+    const rfi = (ref: string) => of("rfi").find((x) => x.ref === ref)!;
+    expect(rfi("RFI-05")).toMatchObject({ status: "CLOSED" });
+    expect(rfi("RFI-06")).toMatchObject({ status: "OPEN", rag: "RED" });
+    expect(new Set(reg.map((x) => x.id)).size).toBe(reg.length);
+
+    const q = wb.quotes ?? [];
+    expect(q.map((x) => x.ref)).toEqual(Array.from({ length: 14 }, (_, i) => `Q-${String(i + 1).padStart(2, "0")}`));
+    expect(q[0]).toMatchObject({ package: "Allproof level-threshold drainage", estimate_ref: "ES03", qty: "44", unit: "lm", amount: "40000", supplier: "PlaceMakers Westgate / Allproof technical" });
+    expect(q[10]!.amount).toBe("210606");
+  });
+
   it("reproduces every build-up row of the workbook", () => {
     const bad: unknown[] = [];
     wb.excelRows.forEach((r, i) => {

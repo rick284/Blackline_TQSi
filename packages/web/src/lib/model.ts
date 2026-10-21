@@ -3,7 +3,7 @@
  * runs). Called on every edit; for a whole job this is a few milliseconds, so there is no separate "recalculate" step.
  */
 import { D, ZERO, type Dec } from "@blackline/engine";
-import { assembleInputs, computeTenderEstimate, type BuildUpRow, type RowResult } from "@blackline/tender/core";
+import { assembleInputs, computeTenderEstimate, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
 import type { ServerRecord } from "./draft.js";
 
 export interface QsRow {
@@ -46,6 +46,8 @@ export interface LibraryRow {
   /** Build-up rows that use this rate, and the cost they carry at today's rates */
   usedBy: number;
   cost: Dec;
+  /** Made by the labour builder: its price comes from a saved build-up, and it can't be deleted */
+  built: boolean;
 }
 
 export interface Model {
@@ -59,6 +61,11 @@ export interface Model {
   packageOfQs: Map<string, string>;
   /** Build-up cost whose QS code is not in the takeoff: it still counts in the price, so the screen says so. */
   orphanCost: Dec;
+  /** Saved labour build-ups by library code */
+  labourBuilds: NonNullable<TenderInputs["labourBuilds"]>;
+  /** The tender register (documents, assumptions, exclusions, RFIs, risks) and the supplier quote register */
+  register: NonNullable<TenderInputs["register"]>;
+  quotes: NonNullable<TenderInputs["quotes"]>;
 }
 
 const BLOCKING = new Set(["RESOURCE CODE", "RATE MISSING", "OPERATOR DOUBLE-COUNT", "FUEL DOUBLE-COUNT"]);
@@ -109,9 +116,9 @@ export function buildModel(records: ServerRecord[]): Model {
   const library: LibraryRow[] = inputs.library.map((l) => ({
     recordId: `library:${l.code}`, packageId: pkgOf.get(`library:${l.code}`) ?? "", code: l.code, category: String(l.category ?? ""), description: String(l.description ?? ""),
     unit: String(l.unit ?? ""), baseRate: String(l.baseRate ?? ""), operatorIncluded: String(l.operatorIncluded ?? ""), fuelIncluded: String(l.fuelIncluded ?? ""),
-    source: String(l.source ?? ""), usedBy: usage.get(l.code)?.n ?? 0, cost: usage.get(l.code)?.cost ?? ZERO,
+    source: String(l.source ?? ""), usedBy: usage.get(l.code)?.n ?? 0, cost: usage.get(l.code)?.cost ?? ZERO, built: !!inputs.labourBuilds?.[l.code],
   }));
-  return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost };
+  return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost, labourBuilds: inputs.labourBuilds ?? {}, register: inputs.register ?? [], quotes: inputs.quotes ?? [] };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);

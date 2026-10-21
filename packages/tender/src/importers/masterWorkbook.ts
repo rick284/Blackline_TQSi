@@ -6,8 +6,9 @@
  * value Excel last calculated for it; the platform recalculates everything downstream itself. The values the workbook displayed
  * for its key totals are kept as `reference`, so the platform can prove it reproduces them.
  *
- * Not ported yet: the Cover & Instructions register (documents, assumptions, exclusions, RFIs), Supplier Quote Register,
- * Scope Coverage and the MS Project Import fallback for the programme.
+ * Also read: the Cover & Instructions register (documents, assumptions, exclusions, RFIs) and the Supplier Quote Register.
+ * Not ported yet: the Scope Coverage sheet (the Hobsonville workbook has none; scope items are added on the Scope Register screen)
+ * and the MS Project Import fallback for the programme.
  */
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
@@ -16,6 +17,7 @@ import type { TenderInputs, CommercialLine } from "../estimate.js";
 import * as mr from "../managementReserve.js";
 import type { BuildUpRow, LibraryRate, Overlay, QSItem, WeatherToolRun } from "../models.js";
 import type { Programme, ProgrammeTask } from "../programme.js";
+import type { Quote } from "../quotes.js";
 import type { RegisterItem } from "../register.js";
 import { FIELDS as RT_FIELDS, LIMITS as RT_LIMITS, MODES as RT_MODES, OWNERS as RT_OWNERS, YESNO, type Exposure } from "../riskTruth.js";
 
@@ -153,6 +155,60 @@ function riskTruthTab(ws: Sheet): { risks: RegisterItem[]; exposures: Exposure[]
     exposures.push(item);
   }
   return { risks, exposures };
+}
+
+// ---- Cover & Instructions register -------------------------------------------------------------------------------------------------
+/**
+ * The narrative registers on the cover sheet: the drawing / document register (a row each, in the block under "DRAWING / DOCUMENT
+ * REGISTER"), assumptions (A1, A2 ...), exclusions (EX-01 ...) and pricing qualifications / RFIs (RFI-01 ...). The risks listed on the
+ * cover duplicate the Risk Truth tab, which is the one that carries them, so they are not read twice. An RFI is CLOSED when its own text
+ * says so; its rating is whatever RED / AMBER / GREEN its text states.
+ */
+function coverRegister(ws: Sheet): RegisterItem[] {
+  const items: RegisterItem[] = [];
+  const blank = { ref: "", title: "", detail: "", action: "", status: "", rag: "", owner: "", likelihood: "", impact: "", rating: "" };
+  let inDocs = false;
+  let docs = 0;
+  for (let r = 1; r <= ws.rowCount; r++) {
+    const a = str(val(at(ws, r, 1))), b = str(val(at(ws, r, 2))), c = str(val(at(ws, r, 3)));
+    if (/^DRAWING \/ DOCUMENT REGISTER/i.test(a)) { inDocs = true; continue; }
+    if (inDocs) {
+      if (!a || !b) { inDocs = false; } else if (a !== "Document / Drawing") {
+        docs++;
+        const ref = `DOC-${String(docs).padStart(2, "0")}`;
+        items.push({ ...blank, id: `R-${ref}`, kind: "document", ref, title: a.slice(0, 300), detail: `${b}${c ? `\n\nEstimate use: ${c}` : ""}`.slice(0, 3000) });
+        continue;
+      }
+    }
+    const kind = /^A\d+$/.test(a) ? "assumption" : /^EX-\d+[A-Z]?$/.test(a) ? "exclusion" : /^RFI-\d+[A-Z]?$/.test(a) ? "rfi" : null;
+    if (!kind || !b) continue;
+    items.push({
+      ...blank, id: `R-${a}`, kind, ref: a, title: b.slice(0, 300), detail: b.length > 300 ? b.slice(0, 3000) : "",
+      ...(kind === "rfi" ? { status: /\bCLOSED\b/i.test(b) ? "CLOSED" : "OPEN", rag: ragOf(b) } : {}),
+    });
+  }
+  return items;
+}
+
+// ---- Supplier Quote Register -------------------------------------------------------------------------------------------------------
+/** The quote rows (header row 'Quote ID', then Q-01, Q-02 ...). The verification tables lower down the sheet are evidence, not quotes. */
+function quoteRegister(ws: Sheet): Quote[] {
+  let hdr: number | null = null;
+  for (let r = 1; r <= Math.min(ws.rowCount, 30); r++) if (str(val(at(ws, r, 1))).toLowerCase() === "quote id") { hdr = r; break; }
+  if (hdr === null) return [];
+  const out: Quote[] = [];
+  const num2 = (v: unknown) => { const s = str(v).replace(/,/g, "").replace(/^\$+/, ""); return /^\d+(\.\d+)?$/.test(s) ? s : ""; };
+  for (let r = hdr + 1; r <= ws.rowCount; r++) {
+    const ref = str(val(at(ws, r, 1)));
+    if (!/^Q-?\d+[A-Z]?$/i.test(ref)) { if (out.length) break; else continue; }
+    const g = (col: number) => str(val(at(ws, r, col)));
+    out.push({
+      id: ref, ref, package: g(2).slice(0, 200), estimate_ref: g(3).slice(0, 120), qty: num2(val(at(ws, r, 4))), unit: g(5).slice(0, 20), amount: num2(val(at(ws, r, 6))),
+      scope: g(7).slice(0, 3000), documents: g(8).slice(0, 3000), supplier: g(9).slice(0, 200), status: g(10).slice(0, 300), action: g(11).slice(0, 3000),
+      notes: g(12).slice(0, 3000), treatment: "", verification: "", source: "", quote_date: "", valid_until: "",
+    });
+  }
+  return out;
 }
 
 // ---- management reserve ----------------------------------------------------------------------------------------------------------
@@ -446,9 +502,15 @@ export async function loadMasterWorkbook(bytes: Uint8Array): Promise<ImportedWor
   const dpw = /^\d+$/.test(weatherMeta.wd_per_week ?? "") ? Number(weatherMeta.wd_per_week) : 5;
   const qsCodes = new Set(qs.map((q) => q.code));
 
+  const coverItems = cover ? coverRegister(cover) : [];
+  if (!cover) notes.push("No Cover & Instructions sheet: the document register, assumptions, exclusions and RFIs are empty. Record them on the Scope Register screen.");
+  const qr = sheet("Supplier Quote Register");
+  const quotes = qr ? quoteRegister(qr) : [];
+  if (!quotes.length) notes.push("No quotes were found in a Supplier Quote Register sheet: record them on the Scope Register screen.");
+
   return {
     reference, meta: cover ? coverMeta(cover) : {}, library, qs, rows, excelRows, tool, recovery, commercial, riskFeed, overlays, overlap, weatherMeta,
-    weatherLinks, controls, register: rtTab.risks, notes, riskTruth: rtTab.exposures, managementReserve: reserveFromCommercial(commercial, ci),
+    weatherLinks, controls, register: [...coverItems, ...rtTab.risks], quotes, scope: [], notes, riskTruth: rtTab.exposures, managementReserve: reserveFromCommercial(commercial, ci),
     programme: programmeFromSheet(sheet("Programme Export"), qsCodes, start, dpw), workbook: wb,
   };
 }

@@ -2,6 +2,7 @@ import { useConnection } from "../api.js";
 import { money, pct } from "../lib/fmt.js";
 import { useSession } from "../session.js";
 import type { Workspace } from "../workspace.js";
+import { ConfirmBar } from "./PackageBar.js";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -13,6 +14,7 @@ export function Packages({ ws }: { ws: Workspace }) {
   const isManager = session!.role === "manager" || session!.role === "owner";
   return (
     <div className="page">
+      <ConfirmBar ws={ws} />
       {ws.notice && <div className={`notice ${ws.notice.kind}`}>{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
       <p className="muted">A package is the part of the estimate one person works on at a time. Check it out before you work, offline or not; check it in when you are done.</p>
       <table className="plain">

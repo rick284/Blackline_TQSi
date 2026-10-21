@@ -187,21 +187,32 @@ export function useWorkspace(jobId: string, session: Session) {
     setNotice({ kind: "info", text: "Marked as dealt with." });
   }), [run]);
 
-  const release = useCallback((id: string) => run(async () => {
-    if (countChanges(savedRef.current.drafts, id) && !window.confirm("Discard your unsaved changes and release this package?")) return;
+  // A question to the person is asked in the page (a bar above the grid), never in a browser pop-up.
+  const [ask, setAsk] = useState<{ text: string; label: string; go: () => void } | null>(null);
+
+  const doRelease = useCallback((id: string) => run(async () => {
     await api("POST", `/packages/${id}/release`);
     persist(dropHeld(savedRef.current, id));
     await load();
     setNotice({ kind: "info", text: "Released. The package is free for others." });
   }), [run, persist, load]);
 
-  const breakLock = useCallback((id: string) => run(async () => {
-    if (!window.confirm(`Break ${pkg(id)?.lock?.holder_name ?? "their"} lock? Their unsaved work will be refused if they check in later.`)) return;
+  const release = useCallback((id: string) => {
+    if (countChanges(savedRef.current.drafts, id)) setAsk({ text: "Discard your unsaved changes and release this package?", label: "Discard and release", go: () => void doRelease(id) });
+    else void doRelease(id);
+  }, [doRelease]);
+
+  const doBreak = useCallback((id: string) => run(async () => {
     await api("POST", `/packages/${id}/break-lock`);
     await load();
     setNotice({ kind: "warn", text: "Lock broken. The package is back at its last checked-in version." });
-  }), [run, pkg, load]);
+  }), [run, load]);
 
+  const breakLock = useCallback((id: string) => {
+    setAsk({ text: `Break ${packagesRef.current.find((p) => p.id === id)?.lock?.holder_name ?? "their"} lock? Their unsaved work will be refused if they check in later.`, label: "Break the lock", go: () => void doBreak(id) });
+  }, [doBreak]);
+
+  const answer = useCallback((yes: boolean) => { const a = ask; setAsk(null); if (yes && a) a.go(); }, [ask]);
   // ---- drafting (always local; the server is only told at check-in)
   const edit = useCallback((packageId: string, recordId: string, fn: (body: any) => any) => {
     if (!records || !canEdit(packageId)) return;
@@ -234,18 +245,28 @@ export function useWorkspace(jobId: string, session: Session) {
     persist({ ...savedRef.current, drafts: addRecord(savedRef.current.drafts, packageId, `library:${code}`, data) });
   }, [records, canEdit, effective, persist]);
 
+  const record = useCallback((id: string) => effective.find((r) => r.id === id)?.data, [effective]);
+  const nextSeq = useCallback((kind: string) => 1 + Math.max(0, ...effective.filter((r) => r.data.kind === kind).map((r) => r.data.seq ?? 0)), [effective]);
+
+  /** Save a built labour rate: the library rate and the build that produced it go into the draft together. */
+  const saveLabour = useCallback((packageId: string, code: string, library: RecordData, build: RecordData) => {
+    if (!records || !canEdit(packageId)) return;
+    const d = setRecord(setRecord(savedRef.current.drafts, records, packageId, `library:${code}`, library), records, packageId, `labour:${code}`, build);
+    persist({ ...savedRef.current, drafts: d });
+  }, [records, canEdit, persist]);
+
   const removeRow = useCallback((packageId: string, recordId: string) => {
     if (!records || !canEdit(packageId)) return;
     persist({ ...savedRef.current, drafts: deleteRecord(savedRef.current.drafts, records, packageId, recordId) });
   }, [records, canEdit, persist]);
 
   return {
-    loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued,
+    loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
-    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, addRate, removeRate: removeRow, dismiss: () => setNotice(null),
+    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
   };
 }
 

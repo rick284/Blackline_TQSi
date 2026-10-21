@@ -50,7 +50,8 @@ export interface TenderInputs {
   quotes?: Quote[];
   scope?: ScopeItem[];
   programme?: Programme | null;
-  labourBuilds?: Record<string, { inputs: Record<string, unknown> }>;
+  /** Labour true-cost builds by library code, with the earlier builds kept as history. */
+  labourBuilds?: Record<string, { inputs: Record<string, unknown>; history?: { rate: string; status: string; evidence: string; source_date: string }[] }>;
   /** Values the source workbook displayed, for reconciliation. Null once the tender has been edited in the platform. */
   reference?: Record<string, Num> | null;
 }
@@ -184,6 +185,13 @@ export function computeTenderEstimate(m: TenderInputs) {
   for (const [ref, amt] of tender.additions) costs[ref] = amt;
   const scope = computeScope(m.scope ?? [], costs, register, new Set((m.quotes ?? []).filter((q) => q.ref).map((q) => q.ref.toUpperCase())));
 
+  // a build that fails its own checks is reported, not allowed to break the whole job
+  const labourBuilds: Record<string, LabourResult> = {};
+  const labourBuildErrors: Record<string, string> = {};
+  for (const [code, b] of Object.entries(m.labourBuilds ?? {})) {
+    try { labourBuilds[code] = computeLabourRate(b.inputs); } catch (e) { labourBuildErrors[code] = e instanceof Error ? e.message : String(e); }
+  }
+
   const qaCounts: Record<string, number> = {};
   for (const r of rows) qaCounts[r.qaFlag] = (qaCounts[r.qaFlag] ?? 0) + 1;
 
@@ -192,7 +200,8 @@ export function computeTenderEstimate(m: TenderInputs) {
     reconciled: m.reference ? reconciliation.every((r) => r.ok) : null, edited: m.reference === null || m.reference === undefined,
     schedule, scheduleIsAuto: autoSchedule || !!sched.auto, programme, scope, qaCounts,
     registerSummary: statusSummary(register),
-    labourBuilds: Object.fromEntries(Object.entries(m.labourBuilds ?? {}).map(([code, b]) => [code, computeLabourRate(b.inputs) as LabourResult])),
+    labourBuilds,
+    labourBuildErrors,
     summary: {
       allIn: cons.allInTender, siteworksTender: tender.tenderExclGst, knownCost: cons.grossKnownPackage, siteworksPrecommercial: tender.subtotal,
       managementReserve: tender.additions.get("CA16"), weatherAllowance: weather.allowance, grossMarginOnSell: cons.grossMarginOnSell, baseDirect: tender.baseDirect,

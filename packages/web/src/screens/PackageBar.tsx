@@ -3,6 +3,18 @@ import { useConnection } from "../api.js";
 import { useSession } from "../session.js";
 import type { Workspace } from "../workspace.js";
 
+/** A question asked in the page: a bar above the grid with two plain buttons. Nothing opens over the top of the work. */
+export function ConfirmBar({ ws }: { ws: Workspace }) {
+  if (!ws.ask) return null;
+  return (
+    <div className="notice warn" role="alertdialog" aria-live="assertive">
+      <span>{ws.ask.text}</span>
+      <button className="btn primary" style={{ marginLeft: "auto", textDecoration: "none" }} onClick={() => ws.answer(true)}>{ws.ask.label}</button>
+      <button className="btn" style={{ marginLeft: 0, textDecoration: "none" }} onClick={() => ws.answer(false)}>Keep working</button>
+    </div>
+  );
+}
+
 /**
  * The toolbar for working on one package: who has it, and check out / check in / release / break. Every screen that edits a package
  * uses this one, so the rules (and the wording) are the same everywhere. `children` are the screen's own buttons.
@@ -20,6 +32,7 @@ export function PackageBar({ ws, pkgId, children }: { ws: Workspace; pkgId: stri
   const queued = !!ws.queued[pkgId];
 
   return (
+    <>
     <div className="toolbar" role="toolbar" aria-label="Package">
       <div className="group">
         <span className="label">Package</span>
@@ -40,5 +53,7 @@ export function PackageBar({ ws, pkgId, children }: { ws: Workspace; pkgId: stri
       {editable && <span className="muted">White cells are yours to change. Shaded cells are calculated.</span>}
       {!editable && pkg && <span className="muted">{holder === null ? "Check this package out to change it." : mine ? "" : `Read-only: ${holder} has this package.`}</span>}
     </div>
+    <ConfirmBar ws={ws} />
+    </>
   );
 }
