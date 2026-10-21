@@ -3,9 +3,25 @@
  * runs). Called on every edit; for a whole job this is a few milliseconds, so there is no separate "recalculate" step.
  */
 import { D, ZERO, type Dec } from "@blackline/engine";
-import { assembleInputs, computeTenderEstimate, gantt as G, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
+import { assembleInputs, computeTenderEstimate, gantt as G, submission as SUB, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
 import type { ServerRecord } from "./draft.js";
 import { pInfosOf, reconcile, statusOf, type PInfo, type SyncStatus } from "./programmeSync.js";
+
+type SubmissionLetter = SUB.Letter;
+type SubmissionQualification = SUB.Qualification;
+type SubmissionAlternative = SUB.Alternative;
+type SubmissionGate = SUB.Gate;
+const submissionGates = (e: ReturnType<typeof computeTenderEstimate>) => SUB.gates(e);
+
+function submissionOf(records: ServerRecord[]): Model["submission"] {
+  const by = (kind: string) => records.filter((r) => r.data.kind === kind).sort((a, b) => (a.data.seq ?? 0) - (b.data.seq ?? 0));
+  return {
+    packageId: records.find((r) => r.id === "sub:letter")?.packageId ?? "",
+    letter: (records.find((r) => r.id === "sub:letter")?.data.body as SubmissionLetter | undefined) ?? null,
+    qualifications: by("submissionQual").map((r) => r.data.body as SubmissionQualification),
+    alternatives: by("submissionAlt").map((r) => r.data.body as SubmissionAlternative),
+  };
+}
 
 export interface QsRow {
   kind: "section" | "item";
@@ -85,6 +101,12 @@ export interface Model {
   /** The Programme as the Gantt sees it (null until a programme is started), and, when the Gantt is linked to it, what is not yet carried across */
   programmeInfos: PInfo[] | null;
   syncStatus: SyncStatus | null;
+  /** The engine inputs the screens are showing (for setting this work beside an issued revision) */
+  inputs: TenderInputs;
+  /** The Submission package: tender letter, qualifications (in order) and alternatives; the package's id is "" until it is started */
+  submission: { packageId: string; letter: SubmissionLetter | null; qualifications: SubmissionQualification[]; alternatives: SubmissionAlternative[] };
+  /** What stops this tender issuing, and what is worth a look first */
+  gates: { blockers: SubmissionGate[]; warnings: SubmissionGate[] };
 }
 
 const BLOCKING = new Set(["RESOURCE CODE", "RATE MISSING", "OPERATOR DOUBLE-COUNT", "FUEL DOUBLE-COUNT"]);
@@ -144,7 +166,7 @@ export function buildModel(records: ServerRecord[]): Model {
     commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve, programme: inputs.programme ?? null,
     gantt: ganttProject, ganttRows, ganttSchedule: ganttProject ? G.schedule(ganttProject) : null, ganttPackageId: pkgOf.get("gantt:config") ?? "",
     ganttRecordIds: records.filter((r) => /^(gantt|gtask|gcal|gres|gasg):/.test(r.id)).map((r) => r.id),
-    programmeInfos: pInfos, syncStatus: ganttProject?.progLink && pInfos ? statusOf(reconcile(pInfos, ganttRows, ganttProject.minutesPerDay)) : null };
+    inputs, gates: submissionGates(estimate), submission: submissionOf(records), programmeInfos: pInfos, syncStatus: ganttProject?.progLink && pInfos ? statusOf(reconcile(pInfos, ganttRows, ganttProject.minutesPerDay)) : null };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);

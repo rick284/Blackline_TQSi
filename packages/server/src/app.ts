@@ -1,4 +1,4 @@
-import { gantt, loadMasterWorkbook, splitIntoPackages } from "@blackline/tender";
+import { assembleInputs, gantt, loadMasterWorkbook, splitIntoPackages, submission } from "@blackline/tender";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z, ZodError, type ZodType } from "zod";
 import type { Db } from "./db.js";
@@ -8,6 +8,7 @@ import { listAudit } from "./repo/audit.js";
 import * as co from "./repo/checkout.js";
 import { computeJobEstimate } from "./repo/estimate.js";
 import * as jobs from "./repo/jobs.js";
+import * as revisions from "./repo/revisions.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -119,6 +120,23 @@ export function buildApp(db: Db): FastifyInstance {
     const r = await jobs.ensurePackage(db, ctx(req), jobId, gantt.ganttSeedPackage(gantt.newProject(start, v.name ?? (job as any).name ?? "Project")));
     return reply.status(r.created ? 201 : 200).send(r);
   });
+
+  // the Submission package: the tender letter and qualifications, drafted from the register
+  app.post("/jobs/:jobId/submission", async (req, reply) => {
+    const jobId = idParam((req.params as any).jobId);
+    const job = (await jobs.getJob(db, ctx(req), jobId)) as any;
+    const register = assembleInputs(await jobs.jobRecords(db, ctx(req), jobId)).register ?? [];
+    const r = await jobs.ensurePackage(db, ctx(req), jobId, submission.submissionSeed({ name: job.name, client: job.client ?? "" }, register));
+    return reply.status(r.created ? 201 : 200).send(r);
+  });
+
+  // issued revisions: frozen, never edited, only superseded
+  app.get("/jobs/:jobId/revisions", async (req) => revisions.listRevisions(db, ctx(req), idParam((req.params as any).jobId)));
+  app.post("/jobs/:jobId/revisions", async (req, reply) => {
+    const v = parse(z.object({ note: z.string().max(2000).optional(), overrideReason: z.string().max(2000).optional() }), req.body ?? {});
+    return reply.status(201).send(await revisions.issueRevision(db, ctx(req), idParam((req.params as any).jobId), v));
+  });
+  app.get("/revisions/:revisionId/records", async (req) => revisions.revisionRecords(db, ctx(req), idParam((req.params as any).revisionId)));
 
   app.post("/jobs/:jobId/import-workbook", async (req, reply) => {
     const jobId = idParam((req.params as any).jobId);

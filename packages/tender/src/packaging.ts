@@ -31,7 +31,7 @@ export interface SeedPackage {
   /** Stable key within a job, e.g. "qs:Earthworks". */
   key: string;
   name: string;
-  kind: "qs-section" | "library" | "commercial" | "subcontracts" | "risk" | "narrative" | "programme" | "settings" | "gantt";
+  kind: "qs-section" | "library" | "commercial" | "subcontracts" | "risk" | "narrative" | "programme" | "settings" | "gantt" | "submission";
   records: Record<string, RecordData>;
 }
 

@@ -182,6 +182,49 @@ table.plain tr.picked td { background: var(--selected); }
 .review-side .page { overflow: auto; flex: 1; padding-top: 4px; }
 @media (max-width: 1000px) { .review { grid-template-columns: 1fr; overflow: auto; } .review-side { border-top: 1px solid var(--line-strong); } }
 
+/* submission */
+.sub-start { overflow: auto; flex: 1; }
+.sub-start .revs { margin-top: 16px; max-width: 520px; }
+.submission { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+.sub-main { overflow: auto; min-height: 0; min-width: 0; border-right: 1px solid var(--line-strong); }
+.sub-side { overflow: auto; min-height: 0; background: var(--panel); }
+.submission h3 { margin: 0; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: var(--header); border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; }
+.submission h3 .sub { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.submission h4 { margin: 14px 0 4px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.sub-main section { border-bottom: 1px solid var(--line-strong); padding-bottom: 12px; }
+.sub-main section > p, .sub-main section > table, .sub-form { margin: 8px 12px 0; }
+.sub-main section > table { width: calc(100% - 24px); }
+.sub-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; max-width: 800px; }
+.sub-form label, .sub-field { display: flex; flex-direction: column; gap: 2px; }
+.sub-form label.wide { grid-column: 1 / -1; }
+.sub-form span, .sub-field span { color: var(--muted); font-size: 11px; }
+.submission input:not([type="checkbox"]), .submission textarea { font: inherit; border: 1px solid var(--line-strong); border-radius: 0; padding: 3px 6px; background: var(--paper); width: 100%; box-sizing: border-box; }
+.submission textarea { resize: vertical; }
+.submission input:disabled, .submission textarea:disabled { background: var(--calc); color: var(--ink); }
+.sub-table { table-layout: fixed; }
+.sub-table td { vertical-align: top; }
+.sub-table td.c { text-align: center; }
+.sub-table tr.off td { color: var(--faint); }
+.sub-table tr.off textarea, .sub-table tr.off input:not([type="checkbox"]) { color: var(--faint); }
+.sub-table tr.new td { background: var(--panel); }
+.sub-pad { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.sub-pad .btn { align-self: flex-start; }
+.gate { border: 1px solid var(--line-strong); background: var(--paper); padding: 4px 8px; }
+.gate.block { border-color: var(--black); border-left-width: 4px; }
+.gate .tag { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
+.gate a { margin-left: 6px; color: var(--ink); }
+.revs { display: flex; flex-direction: column; gap: 6px; }
+.rev { border: 1px solid var(--line-strong); background: var(--paper); padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+.rev.old { background: var(--panel); }
+.rev-head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rev-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.compare { background: var(--paper); }
+.compare h3 { align-items: center; }
+.compare table, .compare h4, .compare p { margin-left: 12px; margin-right: 12px; width: calc(100% - 24px); }
+.compare td.chg { font-weight: 600; }
+@media (max-width: 1150px) { .submission { grid-template-columns: 1fr; overflow: auto; } .submission { grid-auto-rows: max-content; align-content: start; } .sub-main, .sub-side { overflow: visible; min-height: auto; } .sub-side { border-top: 1px solid var(--line-strong); } }
+@media (max-width: 640px) { .sub-form { grid-template-columns: 1fr; } }
+
 /* programme and gantt */
 .prog-strip { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 5px 12px; background: var(--paper); border-bottom: 1px solid var(--line-strong); }
 .prog-strip label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
