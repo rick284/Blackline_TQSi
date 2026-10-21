@@ -10,6 +10,7 @@
  * Scope Coverage and the MS Project Import fallback for the programme.
  */
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { D, ZERO } from "@blackline/engine";
 import type { TenderInputs, CommercialLine } from "../estimate.js";
 import * as mr from "../managementReserve.js";
@@ -266,11 +267,30 @@ export interface ImportedWorkbook extends TenderInputs {
 
 type Decimal = InstanceType<typeof D>;
 
-/** `source` is a file path, or the workbook's bytes (for an upload). */
-export async function loadMasterWorkbook(source: string | ExcelJS.Buffer): Promise<ImportedWorkbook> {
+/**
+ * Some generators write every element with a namespace prefix (<x:workbook>), which ExcelJS cannot read (it returns nothing for the
+ * workbook part). The prefix carries no meaning here, so strip it from the XML parts before loading.
+ */
+async function normaliseXml(bytes: Uint8Array): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(bytes);
+  let changed = false;
+  for (const name of Object.keys(zip.files)) {
+    if (!/\.(xml|rels)$/.test(name) || zip.files[name]!.dir) continue;
+    const text = await zip.files[name]!.async("string");
+    const stripped = text.includes("<x:") ? text.replace(/<(\/?)x:/g, "<$1").replace(/\sxmlns:x=/g, " xmlns=") : text;
+    // Merged-cell ranges only affect layout, and some workbooks carry overlapping ranges that ExcelJS refuses to load.
+    const unmerged = name.startsWith("xl/worksheets/") ? stripped.replace(/<mergeCells\b[\s\S]*?<\/mergeCells>/g, "") : stripped;
+    if (unmerged === text) continue;
+    zip.file(name, unmerged);
+    changed = true;
+  }
+  return changed ? zip.generateAsync({ type: "uint8array" }) : bytes;
+}
+
+/** `bytes` is the workbook file's content (read it with fs on the server, or take an upload). */
+export async function loadMasterWorkbook(bytes: Uint8Array): Promise<ImportedWorkbook> {
   const wb = new ExcelJS.Workbook();
-  if (typeof source === "string") await wb.xlsx.readFile(source);
-  else await wb.xlsx.load(source);
+  await wb.xlsx.load((await normaliseXml(bytes)) as unknown as ExcelJS.Buffer);
   const sheet = (n: string): Sheet | null => wb.getWorksheet(n) ?? null;
   const names = wb.worksheets.map((w) => w.name);
 

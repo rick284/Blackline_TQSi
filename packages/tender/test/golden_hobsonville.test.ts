@@ -3,7 +3,7 @@
  * the cent. Ported from QSi Pro engine/tests/test_golden_hobsonville.py and test_programme.py (Hobsonville class).
  * Needs private/Rev34E.xlsx (client workbook: not committed, see .gitignore). Skipped when the file is absent.
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { cents, D, ZERO, type Dec } from "@blackline/engine";
 import {
@@ -29,7 +29,7 @@ describe.skipIf(!present)("Hobsonville Rev34E golden test", () => {
   let cons: ReturnType<typeof computeConsolidated>;
 
   beforeAll(async () => {
-    wb = await loadMasterWorkbook(FILE.pathname.replace(/^\/([A-Za-z]:)/, "$1").replaceAll("%20", " "));
+    wb = await loadMasterWorkbook(readFileSync(FILE));
     rows = computeBuildup(wb.rows, wb.qs, wb.library);
     qs = computeQs(wb.qs, rows);
     const byExcel = new Map(wb.excelRows.map((r, i) => [r, rows[i]!]));
