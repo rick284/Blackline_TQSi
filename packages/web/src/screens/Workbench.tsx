@@ -5,13 +5,16 @@ import { gridTheme, monoCell } from "../grid.js";
 import { parseNumberCell } from "../lib/draft.js";
 import { money, num } from "../lib/fmt.js";
 import { isBlocking, total, type BuildupRow, type QsRow } from "../lib/model.js";
+import { newQsItem, qsDeletion } from "../lib/qs.js";
 import { PackageBar } from "./PackageBar.js";
 import type { Workspace } from "../workspace.js";
 
 const MODES = ["Time x Count", "QS Qty x Factor", "Direct Qty", "Lump Sum / Quote"];
 const RESOURCE_TYPES = ["Labour", "Plant", "Material", "Subcontract", "Other"];
 
-interface QsData extends QsRow { holder: string }
+interface QsData extends QsRow { holder: string; isNew?: boolean }
+const NEW_KEY = "__new";
+const blankQs = (section: string): QsData => ({ kind: "item", key: NEW_KEY, code: "", section, description: "", unit: "", quantity: "", amount: null as never, rate: null, rows: 0, flags: 0, recordId: "", packageId: "", holder: "", isNew: true });
 interface RowData {
   recordId: string; packageId: string; rowId: string; task: string; resourceType: string; resourceCode: string; resource: string; mode: string;
   productivityRate: string; durationOverrideHrs: string; count: string; manualQty: string; utilisation: string; waste: string; jobRateOverride: string;
@@ -40,6 +43,30 @@ export function Workbench({ ws }: { ws: Workspace }) {
   const [selectedQs, setSelectedQs] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const qsApi = useRef<GridApi<QsData> | null>(null);
+  // a new takeoff line: pinned at the top with its code cell open, like a new line in a spreadsheet
+  const [addingItem, setAddingItem] = useState(false);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const accepted = useRef(false);
+  useEffect(() => {
+    if (!addingItem) return;
+    accepted.current = false;
+    const t = setTimeout(() => qsApi.current?.startEditingCell({ rowIndex: 0, rowPinned: "top", colKey: "code" }), 30);
+    return () => clearTimeout(t);
+  }, [addingItem]);
+  useEffect(() => {
+    if (!justAdded) return;
+    const api = qsApi.current;
+    const node = api?.getRowNode(`q:${justAdded}`);
+    if (!api || !node) return;
+    const code = justAdded;
+    setJustAdded(null);
+    setSelectedQs(code);
+    api.ensureNodeVisible(node, "middle");
+    setTimeout(() => {
+      const n = api.getRowNode(`q:${code}`);
+      if (n?.rowIndex != null) { api.setFocusedCell(n.rowIndex, "description"); api.startEditingCell({ rowIndex: n.rowIndex, colKey: "description" }); }
+    }, 350);
+  });
 
   useEffect(() => { if (!selectedQs || !items.some((i) => i.code === selectedQs)) setSelectedQs(items[0]?.code ?? null); }, [items, selectedQs]);
   // keep the grid's own selection on the chosen item, including after the rows are rebuilt by an edit
@@ -59,11 +86,34 @@ export function Workbench({ ws }: { ws: Workspace }) {
   );
   const buildRows = useMemo(() => (selectedQs ? (model.buildups.get(selectedQs) ?? []).map(rowData) : []), [model, selectedQs]);
 
+  const textQs = (field: "description" | "unit", headerName: string, o: Partial<ColDef<QsData>> = {}): ColDef<QsData> => ({
+    field, headerName,
+    editable: (p) => p.data?.kind === "item" && !p.data.isNew && ws.canEdit(p.data.packageId),
+    cellClass: (p) => (p.data?.isNew ? "cell-new" : p.data?.kind === "item" ? (ws.canEdit(p.data.packageId) ? "cell-input" : "cell-locked") : ""),
+    valueSetter: (p) => { if (!p.data?.isNew) ws.edit(p.data.packageId, p.data.recordId, (b) => ({ ...b, [field]: s(p.newValue).trim() })); return false; },
+    ...o,
+  });
+
   const qsCols: (ColDef<QsData> | ColGroupDef<QsData>)[] = [
     { headerName: "Item", children: [
-      { field: "code", headerName: "Code", width: 84, cellClass: "mono" },
-      { field: "description", headerName: "Description", flex: 1, minWidth: 220 },
-      { field: "unit", headerName: "Unit", width: 62 },
+      {
+        field: "code", headerName: "Code", width: 84, editable: (p) => !!p.data?.isNew, cellClass: (p) => (p.data?.isNew ? "cell-new mono" : "mono"),
+        valueFormatter: (p) => (p.data?.isNew && !p.value ? "New code…" : String(p.value ?? "")),
+        valueSetter: (p) => {
+          if (!p.data?.isNew) return false;
+          const code = String(p.newValue ?? "").trim();
+          if (!code) return false; // left empty: the new line is dropped when editing stops
+          const made = newQsItem(code, p.data.section, items.map((i) => i.code), ws.nextSeq("qs"));
+          if (!made.ok) { ws.notify({ kind: "warn", text: made.error }); return false; }
+          accepted.current = true;
+          ws.adopt(pkgId, made.recordId, made.data);
+          setAddingItem(false);
+          setJustAdded(code);
+          return false;
+        },
+      },
+      textQs("description", "Description", { flex: 1, minWidth: 220 }),
+      textQs("unit", "Unit", { width: 62 }),
     ] },
     { headerName: "Quantity", children: [
       {
@@ -133,6 +183,16 @@ export function Workbench({ ws }: { ws: Workspace }) {
     ] },
   ];
 
+  /** Delete the selected takeoff item with its build-up rows; asks first when there are rows, and one undo puts it all back. */
+  const deleteItem = () => {
+    const del = selectedQs ? qsDeletion(model, selectedQs) : null;
+    if (!del || !selectedQs) return;
+    const code = selectedQs;
+    const go = () => { ws.removeMany(del.records); setSelectedRow(null); };
+    if (del.rows === 0) go();
+    else ws.confirm(`Delete ${code} and its ${del.rows} build-up row${del.rows === 1 ? "" : "s"}? You can undo this.`, "Delete item", go);
+  };
+
   const orphan = model.orphanCost.gt(0);
   const totalRow: QsData[] = [{ kind: "section", key: "total", code: "", section: "", description: "Total direct cost", unit: "", quantity: "", amount: total(model.qsRows), rate: null, rows: 0, flags: 0, recordId: "", packageId: "", holder: "" }];
   const rowClass = (p: RowClassParams<QsData>) => (p.data?.key === "total" ? "row-total" : p.data?.kind === "section" ? "row-section" : "");
@@ -142,6 +202,8 @@ export function Workbench({ ws }: { ws: Workspace }) {
   return (
     <>
       <PackageBar ws={ws} pkgId={pkgId}>
+        <button className="btn" disabled={!editable || addingItem} onClick={() => setAddingItem(true)} title="A new takeoff item in the same section as the selected one">Add item</button>
+        <button className="btn" disabled={!editable || !selectedQs} onClick={deleteItem}>Delete item</button>
         <button className="btn" disabled={!editable || !selectedQs} onClick={() => selectedQs && ws.addRow(pkgId, selectedQs)}>Add row</button>
         <button className="btn" disabled={!editable || !selectedRow} onClick={() => { const r = buildRows.find((x) => x.rowId === selectedRow); if (r) { ws.removeRow(r.packageId, r.recordId); setSelectedRow(null); } }}>Delete row</button>
       </PackageBar>
@@ -153,8 +215,10 @@ export function Workbench({ ws }: { ws: Workspace }) {
           <div className="grid">
             <AgGridReact<QsData>
               theme={gridTheme} rowData={qsRows} columnDefs={qsCols} getRowId={(p) => p.data.key} pinnedBottomRowData={totalRow} getRowClass={rowClass}
+              pinnedTopRowData={addingItem ? [blankQs(items.find((i) => i.code === selectedQs)?.section ?? "")] : []}
+              onCellEditingStopped={(e) => { if (e.rowPinned === "top" && !accepted.current) setAddingItem(false); }}
               onGridReady={(e) => { qsApi.current = e.api; }} animateRows={false} suppressMovableColumns singleClickEdit stopEditingWhenCellsLoseFocus
-              rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true, isRowSelectable: (n) => n.data?.kind === "item" }}
+              rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true, isRowSelectable: (n) => n.data?.kind === "item" && !n.data.isNew }}
               onFirstDataRendered={(e) => e.api.forEachNode((n) => n.setSelected(n.data?.kind === "item" && n.data.code === selectedQs))}
               onSelectionChanged={(e) => { const r = e.api.getSelectedRows()[0]; if (r?.kind === "item") { setSelectedQs(r.code); setSelectedRow(null); } }}
             />

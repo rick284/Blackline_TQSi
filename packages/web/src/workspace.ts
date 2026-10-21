@@ -305,6 +305,15 @@ export function useWorkspace(jobId: string, session: Session) {
     commit(deleteRecord(savedRef.current.drafts, records, packageId, recordId));
   }, [records, canEdit, commit]);
 
+  /** Delete several records as one step, so one undo puts them all back. Does nothing unless every package involved is yours. */
+  const removeMany = useCallback((items: { packageId: string; recordId: string }[]) => {
+    if (!records || items.length === 0 || !items.every((i) => canEdit(i.packageId))) return;
+    commit(items.reduce((d, i) => deleteRecord(d, records, i.packageId, i.recordId), savedRef.current.drafts));
+  }, [records, canEdit, commit]);
+
+  /** Ask in the page bar; `go` runs only if the person says yes. */
+  const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
+
   return {
     loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
@@ -312,7 +321,7 @@ export function useWorkspace(jobId: string, session: Session) {
     queuedCount: waiting,
     undo, redo, canUndo: hist.current.past.length > 0, canRedo: hist.current.future.length > 0,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
-    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
+    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, removeMany, confirm, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
   };
 }
 
