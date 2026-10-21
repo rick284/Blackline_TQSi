@@ -163,4 +163,12 @@ describe("checkout and check-in over the API", () => {
     const actions = ((await t.manager.client.get("/audit")).body as any[]).map((a) => a.action);
     for (const a of ["org.created", "job.created", "job.seeded", "package.checked_out", "package.checked_in", "package.checkin_refused", "member.added"]) expect(actions).toContain(a);
   });
-});
+  it("hands a client every checked-in record with its package, so it can recalculate on its own machine", async () => {
+    const t = await setup("Records Co");
+    const r = await t.viewer.client.get(`/jobs/${t.jobId}/records`);
+    expect(r.status).toBe(200);
+    expect(r.body.packages.length).toBe(Object.keys(t.byKey).length);
+    const ids = r.body.records.map((x: any) => x.id);
+    expect(ids).toContain("row:EW01-001");
+    expect(r.body.records.find((x: any) => x.id === "row:EW01-001").packageId).toBe(t.ew);
+  });});

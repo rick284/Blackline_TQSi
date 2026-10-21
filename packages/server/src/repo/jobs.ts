@@ -98,6 +98,15 @@ export async function getPackage(db: Db, ctx: Ctx, packageId: string): Promise<P
   return { ...p, records: Object.fromEntries(recs.map((r) => [r.record_id, r.data])) };
 }
 
+/** Every checked-in record of a job with the package it belongs to: what a client loads to work on (and recalculate) a job. */
+export async function jobRecordsByPackage(db: Db, ctx: Ctx, jobId: string): Promise<{ id: string; packageId: string; data: RecordData }[]> {
+  await getJob(db, ctx, jobId);
+  return (await db.query<{ id: string; package_id: string; data: RecordData }>(
+    `select r.record_id as id, r.package_id, r.data
+       from package_records r join packages p on p.id = r.package_id and p.org_id = r.org_id
+      where p.job_id = $1 and p.org_id = $2 order by p.created_at, r.record_id`, [jobId, ctx.orgId])).rows.map((r) => ({ id: r.id, packageId: r.package_id, data: r.data }));
+}
+
 /** Every checked-in record of a job, across all its packages, ready for `assembleInputs`. */
 export async function jobRecords(db: Db, ctx: Ctx, jobId: string): Promise<{ id: string; data: RecordData }[]> {
   await getJob(db, ctx, jobId);

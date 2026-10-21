@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "start": "vite-node src/main.ts"
+    "start": "vite-node src/main.ts",
+    "demo": "vite-node src/main.ts --demo"
   },
   "dependencies": {
     "@blackline/checkout": "*",

@@ -5,6 +5,10 @@ import { migrate, openPglite } from "./db.js";
 const db = await openPglite(process.env.DATA_DIR);
 const applied = await migrate(db);
 if (applied.length) console.log(`Applied migrations: ${applied.join(", ")}`);
+if (process.env.SEED_DEMO === "1" || process.argv.includes("--demo")) {
+  const { seedDemo } = await import("./devSeed.js");
+  await seedDemo(db);
+}
 const app = buildApp(db);
 const port = Number(process.env.PORT ?? 3000);
 await app.listen({ port, host: "127.0.0.1" });

@@ -102,7 +102,12 @@ export function buildApp(db: Db): FastifyInstance {
   });
   app.get("/jobs/:jobId", async (req) => jobs.getJob(db, ctx(req), idParam((req.params as any).jobId)));
   app.get("/jobs/:jobId/packages", async (req) => jobs.listPackages(db, ctx(req), idParam((req.params as any).jobId)));
-  app.get("/jobs/:jobId/estimate", async (req) => computeJobEstimate(db, ctx(req), idParam((req.params as any).jobId)));
+  app.get("/jobs/:jobId/records", async (req) => {
+    const jobId = idParam((req.params as any).jobId);
+    const [packages, records] = await Promise.all([jobs.listPackages(db, ctx(req), jobId), jobs.jobRecordsByPackage(db, ctx(req), jobId)]);
+    return { packages, records };
+  });
+  app.get("/jobs/:jobId/estimate",async (req) => computeJobEstimate(db, ctx(req), idParam((req.params as any).jobId)));
   app.get("/jobs/:jobId/parked", async (req) => co.listParked(db, ctx(req), idParam((req.params as any).jobId)));
 
   app.post("/jobs/:jobId/import-workbook", async (req, reply) => {

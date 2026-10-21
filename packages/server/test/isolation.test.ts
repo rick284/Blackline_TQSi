@@ -31,7 +31,7 @@ describe("company isolation", () => {
 
   it("answers 404 for every read of another company's job", async () => {
     const { b, jobId } = await twoCompanies();
-    for (const url of [`/jobs/${jobId}`, `/jobs/${jobId}/packages`, `/jobs/${jobId}/estimate`, `/jobs/${jobId}/parked`]) {
+    for (const url of [`/jobs/${jobId}`, `/jobs/${jobId}/packages`, `/jobs/${jobId}/estimate`, `/jobs/${jobId}/parked`, `/jobs/${jobId}/records`]) {
       const r = await b.owner.get(url);
       expect([url, r.status, r.body.error.code]).toEqual([url, 404, "not_found"]);
     }
