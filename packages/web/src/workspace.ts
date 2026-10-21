@@ -64,6 +64,7 @@ export function useWorkspace(jobId: string, session: Session) {
     if (JSON.stringify(before) === JSON.stringify(next)) return;
     hist.current = history.record(hist.current, before);
     bumpHistory((n) => n + 1);
+    setNotice(null); // a warning about an earlier, refused value no longer applies once a change goes through
     persist({ ...savedRef.current, drafts: next });
   }, [persist]);
   const forgetHistory = useCallback(() => { hist.current = history.empty<Drafts>(); bumpHistory((n) => n + 1); }, []);

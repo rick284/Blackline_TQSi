@@ -66,6 +66,12 @@ export interface Model {
   /** The tender register (documents, assumptions, exclusions, RFIs, risks) and the supplier quote register */
   register: NonNullable<TenderInputs["register"]>;
   quotes: NonNullable<TenderInputs["quotes"]>;
+  /** The commercial lines as typed (CA01.., and allowances CX01..), the subcontract packages, the confirmed overlap, and whether the
+   *  Management Reserve block (not CA16's own number) feeds CA16 */
+  commercial: TenderInputs["commercial"];
+  overlays: TenderInputs["overlays"];
+  overlap: string;
+  reserveLinked: boolean;
 }
 
 const BLOCKING = new Set(["RESOURCE CODE", "RATE MISSING", "OPERATOR DOUBLE-COUNT", "FUEL DOUBLE-COUNT"]);
@@ -118,7 +124,8 @@ export function buildModel(records: ServerRecord[]): Model {
     unit: String(l.unit ?? ""), baseRate: String(l.baseRate ?? ""), operatorIncluded: String(l.operatorIncluded ?? ""), fuelIncluded: String(l.fuelIncluded ?? ""),
     source: String(l.source ?? ""), usedBy: usage.get(l.code)?.n ?? 0, cost: usage.get(l.code)?.cost ?? ZERO, built: !!inputs.labourBuilds?.[l.code],
   }));
-  return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost, labourBuilds: inputs.labourBuilds ?? {}, register: inputs.register ?? [], quotes: inputs.quotes ?? [] };
+  return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost, labourBuilds: inputs.labourBuilds ?? {}, register: inputs.register ?? [], quotes: inputs.quotes ?? [],
+    commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);

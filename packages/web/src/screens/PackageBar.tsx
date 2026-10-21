@@ -19,7 +19,7 @@ export function ConfirmBar({ ws }: { ws: Workspace }) {
  * The toolbar for working on one package: who has it, and check out / check in / release / break. Every screen that edits a package
  * uses this one, so the rules (and the wording) are the same everywhere. `children` are the screen's own buttons.
  */
-export function PackageBar({ ws, pkgId, children }: { ws: Workspace; pkgId: string; children?: ReactNode }) {
+export function PackageBar({ ws, pkgId, children, bare }: { ws: Workspace; pkgId: string; children?: ReactNode; bare?: boolean }) {
   const { session } = useSession();
   const online = useConnection() === "online";
   const pkg = ws.pkg(pkgId);
@@ -49,15 +49,15 @@ export function PackageBar({ ws, pkgId, children }: { ws: Workspace; pkgId: stri
         <button className="btn" disabled={!mine || !online || ws.busy} onClick={() => ws.release(pkgId)}>Release</button>
         {isManager && pkg?.lock && !mine && <button className="btn" disabled={!online || ws.busy} onClick={() => ws.breakLock(pkgId)}>Break lock</button>}
       </div>
-      <div className="group">
+      {!bare && <div className="group">
         <button className="btn" disabled={!ws.canUndo} onClick={ws.undo} title="Undo the last change (Ctrl+Z)">Undo</button>
         <button className="btn" disabled={!ws.canRedo} onClick={ws.redo} title="Put back what you undid (Ctrl+Y)">Redo</button>
-      </div>
+      </div>}
       {children && <div className="group">{children}</div>}
       {editable && <span className="muted">White cells are yours to change. Shaded cells are calculated.</span>}
       {!editable && pkg && <span className="muted">{holder === null ? "Check this package out to change it." : mine ? "" : `Read-only: ${holder} has this package.`}</span>}
     </div>
-    <ConfirmBar ws={ws} />
+    {!bare && <ConfirmBar ws={ws} />}
     </>
   );
 }

@@ -172,3 +172,12 @@ table.plain tr.picked td { background: var(--selected); }
 .notice .chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; max-height: 48px; overflow: auto; }
 .notice .chip { margin-left: 0; background: var(--paper); border: 1px solid var(--line-strong); text-decoration: none; padding: 0 8px; }
 .notice .chip:hover:not(:disabled) { background: var(--header); }
+
+/* commercial review */
+.review { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+.review-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-right: 1px solid var(--line-strong); }
+.review-side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.review-side h3 { margin: 0; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: var(--header); border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; }
+.review-side h3 .sub { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.review-side .page { overflow: auto; flex: 1; padding-top: 4px; }
+@media (max-width: 1000px) { .review { grid-template-columns: 1fr; overflow: auto; } .review-side { border-top: 1px solid var(--line-strong); } }
