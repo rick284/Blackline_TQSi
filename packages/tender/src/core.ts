@@ -27,4 +27,5 @@ export * as documents from "./documents.js";
 export * as procurement from "./procurement.js";
 export * as contract from "./contract.js";
 export * as template from "./template.js";
+export { letterDoc, longDateNZ, type LetterDoc } from "./letter.js";
 export * as costControl from "./costControl.js";

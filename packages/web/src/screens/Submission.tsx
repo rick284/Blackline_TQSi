@@ -9,6 +9,7 @@ import { newAlternative, newQualification, setAltField, setLetterField, setQualF
 import { hrefJob, type View } from "../route.js";
 import { useSession } from "../session.js";
 import type { Workspace } from "../workspace.js";
+import { DownloadButton } from "./DownloadButton.js";
 import { PackageBar } from "./PackageBar.js";
 
 interface Rev {
@@ -73,7 +74,7 @@ export function Submission({ ws, jobId }: { ws: Workspace; jobId: string }) {
         <h4>Submission</h4>
         <p className="muted">The submission is the tender letter, the qualifications and any alternatives that go with the price. Start it and the qualifications are drafted from your register (exclusions, assumptions, inclusions and open RFIs) for you to edit. When you issue, the whole tender is frozen as a revision exactly as the client receives it.</p>
         <button className="btn primary" disabled={role === "viewer"} onClick={start}>Start the submission for this job</button>
-        {revs && revs.length > 0 && <Revisions revs={revs} onCompare={setCmp} jobId={jobId} model={model} />}
+        {revs && revs.length > 0 && <Revisions revs={revs} onCompare={setCmp} jobId={jobId} model={model} ws={ws} />}
       </div>
     );
   }
@@ -174,7 +175,11 @@ export function Submission({ ws, jobId }: { ws: Workspace; jobId: string }) {
             );
           })()}
           <section>
-            <h3>Tender letter <button className="btn" style={{ marginLeft: "auto" }} onClick={() => setPreview((p) => !p)}>{preview ? "Hide preview" : "Preview and print"}</button></h3>
+            <h3>Tender letter
+              <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                <DownloadButton ws={ws} path={`/jobs/${jobId}/export/letter.pdf`} label="Download PDF" title="The letter and price schedule as checked in (your unsaved changes are not in it)" />
+                <button className="btn" onClick={() => setPreview((p) => !p)}>{preview ? "Hide preview" : "Preview and print"}</button>
+              </span></h3>
             <div className="sub-form">
               {field("To", "addressee")}{field("Attention", "attention")}
               {field("Your reference", "reference")}{field("Valid for (days)", "validityDays", { width: 70 })}
@@ -259,7 +264,7 @@ export function Submission({ ws, jobId }: { ws: Workspace; jobId: string }) {
           <div className="sub-pad">
             {error && <p className="muted">{error}</p>}
             {revs && revs.length === 0 && <p className="muted">Nothing issued yet. {nextLabel} will be the first.</p>}
-            {revs && revs.length > 0 && <Revisions revs={revs} onCompare={(c) => setCmp(c)} jobId={jobId} model={model} compareWith={compareWith} />}
+            {revs && revs.length > 0 && <Revisions revs={revs} onCompare={(c) => setCmp(c)} jobId={jobId} model={model} compareWith={compareWith} ws={ws} />}
           </div>
         </aside>
       </div>
@@ -276,7 +281,7 @@ function Gate({ g, jobId, blocking }: { g: SUB.Gate; jobId: string; blocking?: b
   );
 }
 
-function Revisions({ revs, compareWith }: { revs: Rev[]; onCompare: (c: Comparison | null) => void; jobId: string; model: unknown; compareWith?: (r: Rev, against: "previous" | "now") => void }) {
+function Revisions({ revs, compareWith, ws }: { revs: Rev[]; onCompare: (c: Comparison | null) => void; jobId: string; model: unknown; compareWith?: (r: Rev, against: "previous" | "now") => void; ws: Workspace }) {
   return (
     <div className="revs">
       {revs.map((r) => (
@@ -291,6 +296,10 @@ function Revisions({ revs, compareWith }: { revs: Rev[]; onCompare: (c: Comparis
           {r.note && <div>{r.note}</div>}
           <div className="num">All-in <strong>${money(r.totals.allIn)}</strong> excl. GST · gross margin {pct(r.totals.grossMarginOnSell)}</div>
           {r.overrides.length > 0 && <div className="muted">Reason given: {r.overrides[0]!.reason}</div>}
+          <div className="rev-actions">
+            <DownloadButton ws={ws} path={`/revisions/${r.id}/export/estimate.xlsx`} label="Excel" title={`${r.label}'s estimate as an Excel workbook, exactly as it was issued`} />
+            <DownloadButton ws={ws} path={`/revisions/${r.id}/export/letter.pdf`} label="Letter PDF" title={`${r.label}'s tender letter and price schedule as a PDF, dated the day it was issued`} />
+          </div>
           {compareWith && (
             <div className="rev-actions">
               <button className="btn" onClick={() => compareWith(r, "previous")} disabled={r.seq === 1}>What changed from the one before</button>

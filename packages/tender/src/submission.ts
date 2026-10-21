@@ -82,9 +82,21 @@ export function qualificationsFrom(register: RegisterItem[]): Qualification[] {
   const order: Record<string, number> = { exclusion: 0, assumption: 1, inclusion: 2, rfi: 3 };
   const out: Qualification[] = [];
   for (const x of register.filter((r) => r.kind in order && !(r.kind === "rfi" && r.status === "CLOSED")).sort((a, b) => (order[a.kind]! - order[b.kind]!))) {
-    out.push({ id: `Q${out.length + 1}`, kind: x.kind as Qualification["kind"], ref: x.ref, text: (x.title || x.detail).slice(0, 1000), include: x.kind !== "rfi" });
+    // an imported item keeps its full wording in `detail` and a 300-character start of it as the title: the client reads all of it, not the start
+    const full = x.detail && x.title && x.detail.length > x.title.length && x.detail.startsWith(x.title) ? x.detail : x.title || x.detail;
+    out.push({ id: `Q${out.length + 1}`, kind: x.kind as Qualification["kind"], ref: x.ref, text: full.slice(0, 1000), include: x.kind !== "rfi" });
   }
   return out;
+}
+
+/** The letter, qualifications and alternatives held in a set of records (the job as it stands, or an issued revision's snapshot). Null letter: never started. */
+export function fromRecords(records: { id: string; data: RecordData }[]): { letter: Letter | null; qualifications: Qualification[]; alternatives: Alternative[] } {
+  const by = (kind: string) => records.filter((r) => r.data.kind === kind).sort((a, b) => (a.data.seq ?? 0) - (b.data.seq ?? 0)).map((r) => r.data.body);
+  return {
+    letter: (records.find((r) => r.id === "sub:letter")?.data.body as Letter | undefined) ?? null,
+    qualifications: by("submissionQual") as Qualification[],
+    alternatives: by("submissionAlt") as Alternative[],
+  };
 }
 
 /**

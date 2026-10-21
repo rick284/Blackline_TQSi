@@ -11,6 +11,10 @@
   "dependencies": {
     "@blackline/engine": "*",
     "exceljs": "4.4.0",
-    "jszip": "3.10.2"
+    "jszip": "3.10.2",
+    "pdfkit": "0.17.2"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "0.17.3"
   }
 }

@@ -6,6 +6,17 @@ import * as S from "../src/submission.js";
 const reg = (kind: string, ref: string, title: string, status = ""): any => ({ id: `R-${ref}`, kind, ref, title, detail: "", action: "", status, rag: "", owner: "", likelihood: "", impact: "", rating: "" });
 const scopeItem = (over: Record<string, string> = {}): any => ({ id: "S1", ref: "SC-001", group: "Permanent works", title: "Earthworks", detail: "", source: "", owner: "OWN WORKS", treatment: "PRICED", cost_refs: "EW01, PV01", register_refs: "", quote_refs: "", basis: "", action: "", ...over });
 
+describe("the wording drafted from the register", () => {
+  it("is the full text when the title is only the start of it (as an import leaves long items), and the title otherwise", () => {
+    const full = "Ground exclusion: ".padEnd(300, "x") + " and the rest of the sentence that the title cut off.";
+    const long = { ...reg("exclusion", "EX-01", full.slice(0, 300)), detail: full };
+    const short = { ...reg("exclusion", "EX-02", "Foundations by others"), detail: "Notes for the estimator that are not for the client" };
+    const q = S.qualificationsFrom([long, short]);
+    expect(q[0]!.text).toBe(full);
+    expect(q[1]!.text).toBe("Foundations by others");
+  });
+});
+
 const base = (): TenderInputs => ({
   library: [{ code: "SUB", description: "Subcontract", unit: "ea", baseRate: "1" }],
   qs: [

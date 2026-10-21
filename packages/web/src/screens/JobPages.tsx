@@ -2,6 +2,7 @@ import { useConnection } from "../api.js";
 import { useSession } from "../session.js";
 import type { Workspace } from "../workspace.js";
 import { ConfirmBar } from "./PackageBar.js";
+import { DownloadButton } from "./DownloadButton.js";
 import { PriceStack } from "./PriceStack.js";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -50,7 +51,12 @@ export function Summary({ ws }: { ws: Workspace }) {
   const e = ws.model!.estimate;
   return (
     <div className="page">
+      {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
       {ws.totalChanges > 0 && <div className="notice warn">These figures include your {ws.totalChanges} unsaved change{ws.totalChanges === 1 ? "" : "s"}, worked out on this computer.</div>}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "0 0 8px" }}>
+        <DownloadButton ws={ws} path={`/jobs/${ws.jobId}/export/estimate.xlsx`} label="Download as Excel" title="The estimate as it is checked in: takeoff, build-up, commercial lines, price schedule, scope and quotes" />
+        <span className="muted">As checked in{ws.totalChanges > 0 ? ": your unsaved changes are not in the file" : ""}. An issued revision's file is on the Submission window.</span>
+      </div>
       <PriceStack model={ws.model!} />
       <h4>Checks</h4>
       <table className="plain">

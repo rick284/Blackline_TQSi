@@ -10,6 +10,7 @@ import { computeJobEstimate } from "./repo/estimate.js";
 import * as contacts from "./repo/contacts.js";
 import * as contracts_ from "./repo/contracts.js";
 import * as cost from "./repo/cost.js";
+import * as exports_ from "./repo/exports.js";
 import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
 import * as revisions from "./repo/revisions.js";
@@ -234,6 +235,14 @@ export function buildApp(db: Db): FastifyInstance {
     await cost.updateClaim(db, ctx(req), J(req), idParam((req.params as any).claimId), parse(z.object({ status: z.enum(["draft", "submitted", "paid"]), on: z.string().max(10).optional(), paidAmount: z.string().max(40).optional() }), req.body));
     return reply.status(204).send();
   });
+
+  // files: the estimate as Excel and the tender letter as PDF, for the job as it stands or an issued revision exactly as sent
+  const send = (reply: import("fastify").FastifyReply, f: exports_.FileOut) =>
+    reply.header("content-type", f.type).header("content-disposition", `attachment; filename="${f.name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(f.name)}`).header("cache-control", "no-store").send(f.body);
+  app.get("/jobs/:jobId/export/estimate.xlsx", async (req, reply) => send(reply, await exports_.estimateXlsx(db, ctx(req), J(req))));
+  app.get("/jobs/:jobId/export/letter.pdf", async (req, reply) => send(reply, await exports_.letterPdfOf(db, ctx(req), J(req))));
+  app.get("/revisions/:revisionId/export/estimate.xlsx", async (req, reply) => send(reply, await exports_.revisionXlsx(db, ctx(req), idParam((req.params as any).revisionId))));
+  app.get("/revisions/:revisionId/export/letter.pdf", async (req, reply) => send(reply, await exports_.revisionLetterPdf(db, ctx(req), idParam((req.params as any).revisionId))));
 
   // issued revisions: frozen, never edited, only superseded
   app.get("/jobs/:jobId/revisions", async (req) => revisions.listRevisions(db, ctx(req), idParam((req.params as any).jobId)));

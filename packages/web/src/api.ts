@@ -54,6 +54,29 @@ export async function apiUpload<T = any>(path: string, file: Blob): Promise<T> {
   return json as T;
 }
 
+/** Fetch a file from the server (it needs the sign-in, so a plain link won't do) and save it under the name the server gave it. */
+export async function apiDownload(path: string): Promise<string> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  let res: Response;
+  try { res = await fetch(`/api${path}`, { headers }); } catch { setConn("offline"); throw new ApiError(0, "offline", "No connection to the server."); }
+  setConn("online");
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    throw new ApiError(res.status, json?.error?.code ?? "error", json?.error?.message ?? `Request failed (${res.status}).`, json ?? {});
+  }
+  const disp = res.headers.get("content-disposition") ?? "";
+  const name = /filename\*=UTF-8''([^;]+)/i.exec(disp)?.[1];
+  const filename = name ? decodeURIComponent(name) : /filename="([^"]+)"/i.exec(disp)?.[1] ?? "download";
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return filename;
+}
+
 export async function api<T = any>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();
