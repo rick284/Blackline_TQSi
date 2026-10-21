@@ -312,6 +312,12 @@ export function useWorkspace(jobId: string, session: Session) {
     commit(items.reduce((d, i) => deleteRecord(d, records, i.packageId, i.recordId), savedRef.current.drafts));
   }, [records, canEdit, commit]);
 
+  /** Write and delete several records of one package as a single step (so one undo puts them all back). A record set to null is deleted. */
+  const batch = useCallback((packageId: string, items: { recordId: string; data: RecordData | null }[]) => {
+    if (!records || items.length === 0 || !canEdit(packageId)) return;
+    commit(items.reduce((d, i) => setRecord(d, records, packageId, i.recordId, i.data), savedRef.current.drafts));
+  }, [records, canEdit, commit]);
+
   /** Ask in the page bar; `go` runs only if the person says yes. */
   const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
 
@@ -322,7 +328,7 @@ export function useWorkspace(jobId: string, session: Session) {
     queuedCount: waiting,
     undo, redo, canUndo: hist.current.past.length > 0, canRedo: hist.current.future.length > 0,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
-    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, removeMany, confirm, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
+    notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, removeMany, batch, confirm, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
   };
 }
 

@@ -4,6 +4,8 @@ import { hrefJob, hrefJobs, type View } from "../route.js";
 import { useSession } from "../session.js";
 import { useWorkspace } from "../workspace.js";
 import { CommercialReview } from "./CommercialReview.js";
+import { Gantt } from "./Gantt.js";
+import { Programme } from "./Programme.js";
 import { Packages, Summary } from "./JobPages.js";
 import { ParkedChanges } from "./Parked.js";
 import { Rates } from "./Rates.js";
@@ -17,10 +19,12 @@ const MODULES: { view: View; label: string }[] = [
   { view: "rates", label: "Rate Library" },
   { view: "scope", label: "Scope Register" },
   { view: "commercial", label: "Commercial Review" },
+  { view: "programme", label: "Programme" },
+  { view: "gantt", label: "Gantt" },
   { view: "parked", label: "Parked changes" },
   { view: "summary", label: "Summary" },
 ];
-const LATER = ["Contacts and Enquiries", "Tender Documents", "Tender Procurement", "Programme", "Submission", "Contract Setup", "Cost Control"];
+const LATER = ["Contacts and Enquiries", "Tender Documents", "Tender Procurement", "Submission", "Contract Setup", "Cost Control"];
 
 export function Job({ jobId, view }: { jobId: string; view: View }) {
   const { session } = useSession();
@@ -44,9 +48,9 @@ export function Job({ jobId, view }: { jobId: string; view: View }) {
   );
 
   return (
-    <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: name }, { label: MODULES.find((m) => m.view === view)!.label }]} nav={nav} ws={ws} plain={view !== "estimate" && view !== "rates" && view !== "scope" && view !== "commercial"}>
+    <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: name }, { label: MODULES.find((m) => m.view === view)!.label }]} nav={nav} ws={ws} plain={view !== "estimate" && view !== "rates" && view !== "scope" && view !== "commercial" && view !== "programme" && view !== "gantt"}>
       {ws.loading ? <div className="empty">Loading…</div> : !ws.model ? <div className="notice error">{ws.notice?.text ?? "This job could not be loaded."}</div> :
-        view === "estimate" ? <Workbench ws={ws} /> : view === "packages" ? <Packages ws={ws} /> : view === "rates" ? <Rates ws={ws} /> : view === "scope" ? <Scope ws={ws} /> : view === "commercial" ? <CommercialReview ws={ws} /> : view === "parked" ? <ParkedChanges ws={ws} /> : <Summary ws={ws} />}
+        view === "estimate" ? <Workbench ws={ws} /> : view === "packages" ? <Packages ws={ws} /> : view === "rates" ? <Rates ws={ws} /> : view === "scope" ? <Scope ws={ws} /> : view === "commercial" ? <CommercialReview ws={ws} /> : view === "programme" ? <Programme ws={ws} jobId={jobId} /> : view === "gantt" ? <Gantt ws={ws} jobId={jobId} /> : view === "parked" ? <ParkedChanges ws={ws} /> : <Summary ws={ws} />}
     </Shell>
   );
 }

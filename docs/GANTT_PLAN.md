@@ -50,6 +50,14 @@ Pure TypeScript, no browser or Node APIs, so the browser and the server calculat
 - Linking the Gantt to the estimate: durations from Programme, cost loading from the estimate for cashflow, weather days from the Weather Risk module.
 - Network diagram, timeline view, reports.
 
+## Status (2026-10-22)
+
+Built and tested: the scheduling engine (calendars, FS/SS/FF/SF with lag, all eight constraints, deadlines, summary roll-up, slack, critical path), MSPDI export and import, the Gantt package on the server (`POST /jobs/:id/gantt`), the Programme window, and Gantt Stage 1: ribbon (File, Task, View, Project), task table with inline editing and outline, timeline with bars / brackets / milestones / link arrows / baseline / today / non-working shading, drag to move, resize and link, Task Information docked beside the chart, build from the Programme, import and export, keyboard shortcuts (Insert, Delete, Alt+Shift+arrows, Ctrl+F2, Ctrl+Shift+F2), undo and redo.
+
+**Not verified:** an exported file has not been opened in MS Project itself. It is well-formed, in Microsoft's namespace, in schema order, and reads back identically in Blackline, but only MS Project can say it is happy. Rick to try one and report anything it says.
+
+Not built yet (Stage 2 onward in the plan above): resource sheet and assignments screens (the data round-trips through the file but has no screen), calendar editor, columns chooser, sort/filter/group, tracking Gantt, split tasks, manual scheduling, percentage lags, baselines 1-10, recurring calendar exceptions, printing, network diagram, timeline view, reports, linking cost loading to the estimate.
+
 ## Rules this module must keep
 
 - No pop-ups: Task Information, the calendar editor and any questions are docked panels or bars in the page.

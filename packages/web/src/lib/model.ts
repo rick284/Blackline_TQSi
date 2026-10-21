@@ -3,7 +3,7 @@
  * runs). Called on every edit; for a whole job this is a few milliseconds, so there is no separate "recalculate" step.
  */
 import { D, ZERO, type Dec } from "@blackline/engine";
-import { assembleInputs, computeTenderEstimate, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
+import { assembleInputs, computeTenderEstimate, gantt as G, type BuildUpRow, type RowResult, type TenderInputs } from "@blackline/tender/core";
 import type { ServerRecord } from "./draft.js";
 
 export interface QsRow {
@@ -72,6 +72,15 @@ export interface Model {
   overlays: TenderInputs["overlays"];
   overlap: string;
   reserveLinked: boolean;
+  /** The tender programme as stored (null when the job has none yet) */
+  programme: TenderInputs["programme"];
+  /** The Gantt: the project, its tasks in row order with their seqs, the schedule worked out from them, and the package that holds it (null until started) */
+  gantt: G.GProject | null;
+  ganttRows: { task: G.GTask; seq: number }[];
+  ganttSchedule: G.ScheduleResult | null;
+  ganttPackageId: string;
+  /** Every record id the Gantt package holds, so a replacement can clear what it doesn't keep */
+  ganttRecordIds: string[];
 }
 
 const BLOCKING = new Set(["RESOURCE CODE", "RATE MISSING", "OPERATOR DOUBLE-COUNT", "FUEL DOUBLE-COUNT"]);
@@ -80,6 +89,8 @@ export function buildModel(records: ServerRecord[]): Model {
   const inputs = assembleInputs(records.map((r) => ({ id: r.id, data: r.data })));
   const estimate = computeTenderEstimate(inputs);
 
+  const ganttProject = G.assembleGantt(records.map((r) => ({ id: r.id, data: r.data })));
+  const ganttRows = records.filter((r) => r.data.kind === "ganttTask").map((r) => ({ task: r.data.body as G.GTask, seq: r.data.seq ?? 0 })).sort((a, b) => a.seq - b.seq);
   const pkgOf = new Map<string, string>(); // record id -> package id
   for (const r of records) pkgOf.set(r.id, r.packageId);
   const packageOfQs = new Map(inputs.qs.map((q) => [q.code, pkgOf.get(`qs:${q.code}`) ?? ""]));
@@ -125,7 +136,9 @@ export function buildModel(records: ServerRecord[]): Model {
     source: String(l.source ?? ""), usedBy: usage.get(l.code)?.n ?? 0, cost: usage.get(l.code)?.cost ?? ZERO, built: !!inputs.labourBuilds?.[l.code],
   }));
   return { estimate, qsRows, buildups, library, libraryPackageId: library[0]?.packageId ?? "", packageOfQs, orphanCost: estimate.qs.orphanCost, labourBuilds: inputs.labourBuilds ?? {}, register: inputs.register ?? [], quotes: inputs.quotes ?? [],
-    commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve };
+    commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve, programme: inputs.programme ?? null,
+    gantt: ganttProject, ganttRows, ganttSchedule: ganttProject ? G.schedule(ganttProject) : null, ganttPackageId: pkgOf.get("gantt:config") ?? "",
+    ganttRecordIds: records.filter((r) => /^(gantt|gtask|gcal|gres|gasg):/.test(r.id)).map((r) => r.id) };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);
