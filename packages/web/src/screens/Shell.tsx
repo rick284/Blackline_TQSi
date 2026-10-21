@@ -50,6 +50,7 @@ export function StatusBar({ ws }: { ws?: Workspace }) {
         <>
           <span className={`badge ${out ? "solid" : ""}`}>{out === 0 ? "Nothing checked out" : `${out} package${out === 1 ? "" : "s"} checked out by you`}</span>
           <span className={`badge ${waiting ? "grey" : ""}`}>{waiting === 0 ? "No changes waiting" : `${waiting} change${waiting === 1 ? "" : "s"} waiting to check in`}</span>
+          {ws.queuedCount > 0 && <span className="badge solid">{ws.queuedCount} check-in{ws.queuedCount === 1 ? "" : "s"} queued: sent when you are back online</span>}
           {ws.fromCache && <span className="badge dashed">Showing the copy saved on this computer</span>}
           <span className="item">Edits are saved on this computer as you make them</span>
         </>

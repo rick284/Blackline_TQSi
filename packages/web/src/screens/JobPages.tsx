@@ -25,12 +25,12 @@ export function Packages({ ws }: { ws: Workspace }) {
                 <td>{p.name}</td>
                 <td className="r num">{p.version}</td>
                 <td className="r num">{p.records}</td>
-                <td>{p.lock ? <span className={`badge ${mine ? "solid" : "grey"}`}>{mine ? "You" : p.lock.holder_name}</span> : <span className="muted">Free</span>}</td>
+                <td>{p.lock ? <span className={`badge ${mine ? "solid" : "grey"}`}>{mine ? (ws.queued[p.id] ? "You (check-in queued)" : "You") : p.lock.holder_name}</span> : <span className="muted">Free</span>}</td>
                 <td className="muted">{p.lock ? when(p.lock.taken_at) : ""}</td>
                 <td className="r num">{ws.changes(p.id) || ""}</td>
                 <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                   {!p.lock && <button className="btn" disabled={!canWrite || !online || ws.busy} onClick={() => ws.checkOut(p.id)}>Check out</button>}
-                  {mine && <button className="btn primary" disabled={!online || ws.busy} onClick={() => ws.checkIn(p.id)}>Check in</button>}{" "}
+                  {mine && !ws.queued[p.id] && <button className="btn primary" disabled={ws.busy} onClick={() => ws.checkIn(p.id)}>{online ? "Check in" : "Check in when online"}</button>}{ws.queued[p.id] && <button className="btn" onClick={() => ws.cancelQueued(p.id)}>Cancel queued check-in</button>}{" "}
                   {mine && <button className="btn" disabled={!online || ws.busy} onClick={() => ws.release(p.id)}>Release</button>}
                   {p.lock && !mine && isManager && <button className="btn" disabled={!online || ws.busy} onClick={() => ws.breakLock(p.id)}>Break lock</button>}
                 </td>

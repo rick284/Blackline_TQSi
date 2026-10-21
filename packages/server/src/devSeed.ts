@@ -37,6 +37,11 @@ const sample: TenderInputs = {
 };
 
 export async function seedDemo(db: Db): Promise<void> {
+  // with DATA_DIR the database survives restarts, so the demo company may already be there
+  if ((await db.query("select 1 from users where lower(email) = 'owner@demo.test'")).rows.length) {
+    console.log("Demo data already present.");
+    return;
+  }
   const owner = await registerOrganisation(db, { orgName: "Demo Civil", name: "Demo Owner", email: "owner@demo.test", password: DEMO_PASSWORD });
   const ownerSession = (await sessionFor(db, owner.token))!;
   const ctx = { userId: owner.userId, orgId: owner.orgId, role: ownerSession.role };

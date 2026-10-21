@@ -13,10 +13,21 @@ export class ApiError extends Error {
 export type Connection = "online" | "offline";
 let conn: Connection = typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "online";
 const listeners = new Set<() => void>();
+let poll: ReturnType<typeof setInterval> | null = null;
 const setConn = (c: Connection) => {
   if (c !== conn) {
     conn = c;
     listeners.forEach((l) => l());
+  }
+  // The browser's own online event is not enough (the network can be up while the server is down), so while offline, keep asking the
+  // server whether it is back. That is what makes queued check-ins go out by themselves.
+  if (c === "offline" && !poll && typeof window !== "undefined") {
+    poll = setInterval(() => {
+      fetch("/api/health", { cache: "no-store" }).then((r) => { if (r.ok) setConn("online"); }).catch(() => undefined);
+    }, 4000);
+  } else if (c === "online" && poll) {
+    clearInterval(poll);
+    poll = null;
   }
 };
 if (typeof window !== "undefined") {
@@ -42,9 +53,15 @@ export async function api<T = any>(method: "GET" | "POST", path: string, body?: 
     setConn("offline");
     throw new ApiError(0, "offline", "No connection to the server.");
   }
-  setConn("online");
   const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
+  let json: any = null;
+  try { json = text ? JSON.parse(text) : null; } catch { /* not JSON: a proxy's own error page */ }
+  // A gateway that cannot reach the server answers 502/503/504, or a plain 500 that is not our API's JSON error. That is "offline", not a bug.
+  if (!res.ok && ([502, 503, 504].includes(res.status) || (res.status === 500 && !json?.error))) {
+    setConn("offline");
+    throw new ApiError(0, "offline", "No connection to the server.");
+  }
+  setConn("online");
   if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? "error", json?.error?.message ?? `Request failed (${res.status}).`, json ?? {});
   return json as T;
 }

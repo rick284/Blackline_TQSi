@@ -155,12 +155,13 @@ export function Workbench({ ws }: { ws: Workspace }) {
         <div className="group">
           <span className="label">Package</span>
           <strong>{pkg?.name ?? "—"}</strong>
-          {holder === null ? <span className="badge">Free</span> : mine ? <span className="badge solid">Checked out by you</span> : <span className="badge grey">Held by {holder}</span>}
+          {holder === null ? <span className="badge">Free</span> : mine ? <span className="badge solid">{ws.queued[pkgId] ? "Check-in queued" : "Checked out by you"}</span> : <span className="badge grey">Held by {holder}</span>}
           <span className="muted">v{pkg?.version ?? "—"}</span>
         </div>
         <div className="group">
           <button className="btn primary" disabled={!canWrite || !pkg || !!pkg.lock || !online || ws.busy} onClick={() => ws.checkOut(pkgId)} title={online ? "" : "Checking out needs a connection"}>Check out</button>
-          <button className="btn primary" disabled={!mine || !online || ws.busy} onClick={() => ws.checkIn(pkgId)}>Check in{changes ? ` (${changes})` : ""}</button>
+          <button className="btn primary" disabled={!mine || ws.busy || !!ws.queued[pkgId]} onClick={() => ws.checkIn(pkgId)} title={online ? "" : "Offline: this will be queued and sent when you reconnect"}>Check in{changes ? ` (${changes})` : ""}{online ? "" : " when online"}</button>
+          {ws.queued[pkgId] && <button className="btn" onClick={() => ws.cancelQueued(pkgId)}>Cancel queued check-in</button>}
           <button className="btn" disabled={!mine || !online || ws.busy} onClick={() => ws.release(pkgId)}>Release</button>
           {isManager && pkg?.lock && !mine && <button className="btn" disabled={!online || ws.busy} onClick={() => ws.breakLock(pkgId)}>Break lock</button>}
         </div>

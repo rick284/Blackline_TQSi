@@ -14,3 +14,6 @@ createRoot(document.getElementById("root")!).render(
     </SessionProvider>
   </StrictMode>,
 );
+
+// The offline app shell. Not in development, where it would serve stale files while you work on them.
+if (import.meta.env.PROD && "serviceWorker" in navigator) window.addEventListener("load", () => void navigator.serviceWorker.register("/sw.js").catch(() => undefined));
