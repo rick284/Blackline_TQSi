@@ -12,12 +12,14 @@ import { Rates } from "./Rates.js";
 import { Scope } from "./Scope.js";
 import { Shell } from "./Shell.js";
 import { Submission } from "./Submission.js";
+import { TenderDocuments } from "./TenderDocuments.js";
 import { Workbench } from "./Workbench.js";
 
 const MODULES: { view: View; label: string }[] = [
   { view: "estimate", label: "Estimate" },
   { view: "packages", label: "Packages" },
   { view: "rates", label: "Rate Library" },
+  { view: "documents", label: "Tender Documents" },
   { view: "scope", label: "Scope Register" },
   { view: "commercial", label: "Commercial Review" },
   { view: "programme", label: "Programme" },
@@ -26,7 +28,7 @@ const MODULES: { view: View; label: string }[] = [
   { view: "parked", label: "Parked changes" },
   { view: "summary", label: "Summary" },
 ];
-const LATER = ["Tender Documents", "Tender Procurement", "Contract Setup", "Cost Control"];
+const LATER = ["Tender Procurement", "Contract Setup", "Cost Control"];
 
 export function Job({ jobId, view }: { jobId: string; view: View }) {
   const { session } = useSession();
@@ -52,9 +54,9 @@ export function Job({ jobId, view }: { jobId: string; view: View }) {
   );
 
   return (
-    <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: name }, { label: MODULES.find((m) => m.view === view)!.label }]} nav={nav} ws={ws} plain={view !== "estimate" && view !== "rates" && view !== "scope" && view !== "commercial" && view !== "programme" && view !== "gantt" && view !== "submission"}>
+    <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: name }, { label: MODULES.find((m) => m.view === view)!.label }]} nav={nav} ws={ws} plain={view !== "estimate" && view !== "rates" && view !== "scope" && view !== "commercial" && view !== "programme" && view !== "gantt" && view !== "submission" && view !== "documents"}>
       {ws.loading ? <div className="empty">Loading…</div> : !ws.model ? <div className="notice error">{ws.notice?.text ?? "This job could not be loaded."}</div> :
-        view === "estimate" ? <Workbench ws={ws} /> : view === "packages" ? <Packages ws={ws} /> : view === "rates" ? <Rates ws={ws} /> : view === "scope" ? <Scope ws={ws} /> : view === "commercial" ? <CommercialReview ws={ws} /> : view === "programme" ? <Programme ws={ws} jobId={jobId} /> : view === "gantt" ? <Gantt ws={ws} jobId={jobId} /> : view === "submission" ? <Submission ws={ws} jobId={jobId} /> : view === "parked" ? <ParkedChanges ws={ws} /> : <Summary ws={ws} />}
+        view === "estimate" ? <Workbench ws={ws} /> : view === "packages" ? <Packages ws={ws} /> : view === "rates" ? <Rates ws={ws} /> : view === "scope" ? <Scope ws={ws} /> : view === "commercial" ? <CommercialReview ws={ws} /> : view === "programme" ? <Programme ws={ws} jobId={jobId} /> : view === "gantt" ? <Gantt ws={ws} jobId={jobId} /> : view === "submission" ? <Submission ws={ws} jobId={jobId} /> : view === "documents" ? <TenderDocuments ws={ws} jobId={jobId} /> : view === "parked" ? <ParkedChanges ws={ws} /> : <Summary ws={ws} />}
     </Shell>
   );
 }

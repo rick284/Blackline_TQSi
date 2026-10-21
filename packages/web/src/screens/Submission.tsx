@@ -21,7 +21,7 @@ interface Comparison { title: string; a: string; b: string; diff: Diff }
 const when = (iso: string) => new Date(iso).toLocaleString("en-NZ", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const WHERE: Record<string, { view: View; label: string }> = {
   scope: { view: "scope", label: "Scope Register" }, estimate: { view: "estimate", label: "Estimate" }, commercial: { view: "commercial", label: "Commercial Review" },
-  summary: { view: "summary", label: "Summary" }, risk: { view: "estimate", label: "Estimate" },
+  summary: { view: "summary", label: "Summary" }, documents: { view: "documents", label: "Tender Documents" }, risk: { view: "estimate", label: "Estimate" },
 };
 
 async function displayOfRevision(id: string): Promise<DisplayEstimate> {

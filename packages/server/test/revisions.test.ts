@@ -112,6 +112,39 @@ describe("a revision is frozen", () => {
   });
 });
 
+describe("a changed document holds the tender", () => {
+  const docRev = (id: string, docId: string, rev: string, seq: number) => ({ kind: "tenderDocRev", seq, body: { id, docId, rev, date: "", addendum: "Addendum 1", note: "Pipe size" } });
+
+  it("starts from the register's documents, blocks issuing while a revision is unchecked, and issues once it is cleared", async () => {
+    const t = await ready("Docs Co");
+    // the register holds a document the scope item cites
+    const reg = { kind: "register", seq: 1, body: { id: "R-DOC-01", kind: "document", ref: "DOC-01", title: "Civil drawings", detail: "Rev A", action: "", status: "", rag: "", owner: "", likelihood: "", impact: "", rating: "" } };
+    expect((await t.est.post(`/packages/${t.byKey.narrative}/checkout`)).status).toBe(200);
+    const cite = { ...scopeRecord, body: { ...scopeRecord.body, register_refs: "DOC-01" } };
+    expect((await t.est.post(`/packages/${t.byKey.narrative}/checkin`, { baseVersion: 2, upserts: { "register:R-DOC-01": reg, "scope:S1": cite }, deletes: [] })).status).toBe(200);
+
+    expect((await t.est.post(`/jobs/${t.jobId}/documents`, {})).body.created).toBe(true);
+    expect((await t.est.post(`/jobs/${t.jobId}/documents`, {})).body.created).toBe(false);
+    const all = (await t.owner.get(`/jobs/${t.jobId}/records`)).body as { packages: { id: string; key: string }[]; records: { id: string }[] };
+    expect(all.records.filter((r) => r.id.startsWith("doc")).map((r) => r.id)).toEqual(["doc:D1", "docrev:D1-1"]);
+
+    // a new revision arrives: the scope item and its estimate lines are flagged
+    const pkg = all.packages.find((p) => p.key === "documents")!.id;
+    expect((await t.est.post(`/packages/${pkg}/checkout`)).status).toBe(200);
+    expect((await t.est.post(`/packages/${pkg}/checkin`, { baseVersion: 1, upserts: { "docrev:D1-2": docRev("D1-2", "D1", "Rev B", 2000) }, deletes: [] })).status).toBe(200);
+    const blocked = await t.mgr.post(`/jobs/${t.jobId}/revisions`, {});
+    expect([blocked.status, blocked.body.error.code]).toEqual([409, "blocked"]);
+    expect(blocked.body.error.message).toContain("document change");
+
+    // someone checks each flag and says so
+    const flags = ["scope:SC-001", "cost:EW01", "cost:PV01"].map((target) => [`docclear:D1-2|${target}`, { kind: "tenderDocClear", body: { revId: "D1-2", target, note: "Checked, no effect", by: "Eli", at: "2026-11-03T00:00:00Z" } }]);
+    expect((await t.est.post(`/packages/${pkg}/checkout`)).status).toBe(200);
+    expect((await t.est.post(`/packages/${pkg}/checkin`, { baseVersion: 2, upserts: Object.fromEntries(flags), deletes: [] })).status).toBe(200);
+    const issued = await t.mgr.post(`/jobs/${t.jobId}/revisions`, { note: "After addendum 1" });
+    expect([issued.status, issued.body.label]).toEqual([201, "Rev A"]);
+  });
+});
+
 describe("the Submission package", () => {
   it("starts with the letter and qualifications drafted from the register, once, for an estimator", async () => {
     const { owner } = await newCompany(s, "Letter Co");

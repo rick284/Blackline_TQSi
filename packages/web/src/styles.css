@@ -249,6 +249,26 @@ table.reg td.overdue { font-weight: 700; color: var(--black); }
 .notice.ask .btn.primary { background: var(--black); color: var(--on-black); border-color: var(--black); }
 .notice.ask input { height: 24px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 0; font: inherit; }
 
+/* tender documents */
+.docs { flex: 1; min-height: 0; overflow: auto; }
+.docs h3 { margin: 0; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: var(--header); border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; }
+.docs h3 .sub { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.docs .pipeline { gap: 18px; }
+.docs section { border-bottom: 1px solid var(--line-strong); }
+.docs .tablewrap { overflow: visible; }
+.flaggroup { border: 1px solid var(--line-strong); background: var(--paper); }
+.flagtitle { padding: 4px 8px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.flagrow { display: flex; gap: 8px; align-items: center; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+.flagrow > span:first-child { flex: 1; min-width: 0; }
+.flagrow input { width: 260px; height: 24px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 0; font: inherit; }
+.flagrow.done { color: var(--muted); }
+.flagrow.all { background: var(--panel); }
+.revform { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.revform label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 11px; }
+.revform label.grow { flex: 1; min-width: 220px; }
+.revform input { height: 24px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 0; font: inherit; background: var(--paper); }
+.revline { display: flex; gap: 10px; align-items: center; padding: 2px 0; }
+
 /* tender letter: on screen as a page, and the same page when printed */
 #print-root { display: none; }
 .letter-preview { background: var(--workspace); }

@@ -1,4 +1,4 @@
-import { assembleInputs, gantt, loadMasterWorkbook, splitIntoPackages, submission } from "@blackline/tender";
+import { assembleInputs, documents, gantt, loadMasterWorkbook, splitIntoPackages, submission } from "@blackline/tender";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z, ZodError, type ZodType } from "zod";
 import type { Db } from "./db.js";
@@ -150,6 +150,15 @@ export function buildApp(db: Db): FastifyInstance {
     const job = (await jobs.getJob(db, ctx(req), jobId)) as any;
     const register = assembleInputs(await jobs.jobRecords(db, ctx(req), jobId)).register ?? [];
     const r = await jobs.ensurePackage(db, ctx(req), jobId, submission.submissionSeed({ name: job.name, client: job.client ?? "" }, register));
+    return reply.status(r.created ? 201 : 200).send(r);
+  });
+
+  // the Tender Documents package: the documents the register already lists, each as its first revision
+  app.post("/jobs/:jobId/documents", async (req, reply) => {
+    const jobId = idParam((req.params as any).jobId);
+    await jobs.getJob(db, ctx(req), jobId);
+    const register = assembleInputs(await jobs.jobRecords(db, ctx(req), jobId)).register ?? [];
+    const r = await jobs.ensurePackage(db, ctx(req), jobId, documents.documentsPackage(register));
     return reply.status(r.created ? 201 : 200).send(r);
   });
 

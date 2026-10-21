@@ -22,7 +22,7 @@ export interface Gate {
   /** In plain words, for the person issuing */
   text: string;
   /** The window that fixes it */
-  where: "scope" | "estimate" | "commercial" | "summary" | "risk";
+  where: "scope" | "estimate" | "commercial" | "summary" | "risk" | "documents";
   count?: number;
 }
 
@@ -39,6 +39,7 @@ export function gates(e: Estimate): { blockers: Gate[]; warnings: Gate[] } {
     if (sc.unhomedQs.length) blockers.push({ id: "scope-unhomed", text: `${plural(sc.unhomedQs.length, "priced QS item")} ${sc.unhomedQs.length === 1 ? "is" : "are"} not covered by any scope requirement (${sc.unhomedQs.slice(0, 6).join(", ")}${sc.unhomedQs.length > 6 ? "…" : ""}).`, where: "scope", count: sc.unhomedQs.length });
     if (sc.counts.CHECK) blockers.push({ id: "scope-check", text: `${plural(sc.counts.CHECK, "scope item")} ${sc.counts.CHECK === 1 ? "is" : "are"} flagged to confirm (a link, a quote or an RFI isn't backed up).`, where: "scope", count: sc.counts.CHECK });
   }
+  if (e.documents.open) blockers.push({ id: "documents", text: `${plural(e.documents.open, "document change")} ${e.documents.open === 1 ? "has" : "have"} not been checked against what ${e.documents.open === 1 ? "it touches" : "they touch"} (scope, estimate lines, quotes).`, where: "documents", count: e.documents.open });
   const bad = e.rows.filter((r) => BLOCKING_QA.has(r.qaFlag)).length;
   if (bad) blockers.push({ id: "rows", text: `${plural(bad, "build-up row")} ${bad === 1 ? "has" : "have"} no rate or ${bad === 1 ? "a" : ""} double count.`, where: "estimate", count: bad });
   if (!e.schedule.reconciles) blockers.push({ id: "schedule", text: "The client price schedule does not add up to the all-in tender.", where: "summary" });

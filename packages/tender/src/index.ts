@@ -20,3 +20,4 @@ export * as managementReserve from "./managementReserve.js";
 export * as labourRate from "./labourRate.js";
 export * as gantt from "./gantt/index.js";
 export * as submission from "./submission.js";
+export * as documents from "./documents.js";

@@ -7,6 +7,7 @@ import { cents, D, type Dec, ZERO } from "@blackline/engine";
 import { computeBuildup } from "./buildup.js";
 import { computeTender, isPreMargin, packageSellLine, type TenderResult } from "./commercial.js";
 import { computeConsolidated } from "./consolidated.js";
+import { computeDocuments, type DocumentsInput } from "./documents.js";
 import { computeLabourRate, type LabourResult } from "./labourRate.js";
 import { computeReserve, type ReserveBlock, type ReserveResult } from "./managementReserve.js";
 import { d, type BuildUpRow, type CommercialInput, type LibraryRate, type Num, type Overlay, type QSItem, type WeatherToolRun } from "./models.js";
@@ -49,6 +50,8 @@ export interface TenderInputs {
   schedule?: Schedule | null;
   quotes?: Quote[];
   scope?: ScopeItem[];
+  /** The tender's documents with their revisions, and the change flags a person has cleared. Absent until the document register is started. */
+  documents?: DocumentsInput | null;
   programme?: Programme | null;
   /** Labour true-cost builds by library code, with the earlier builds kept as history. */
   labourBuilds?: Record<string, { inputs: Record<string, unknown>; history?: { rate: string; status: string; evidence: string; source_date: string }[] }>;
@@ -185,6 +188,9 @@ export function computeTenderEstimate(m: TenderInputs) {
   for (const [ref, amt] of tender.additions) costs[ref] = amt;
   const scope = computeScope(m.scope ?? [], costs, register, new Set((m.quotes ?? []).filter((q) => q.ref).map((q) => q.ref.toUpperCase())));
 
+  // ---- document changes: what each new revision touches, and whether anyone has checked it
+  const documents = computeDocuments(m.documents, m.scope ?? [], m.quotes ?? [], Object.fromEntries(qs.lines.map((l) => [l.code, l.description])));
+
   // a build that fails its own checks is reported, not allowed to break the whole job
   const labourBuilds: Record<string, LabourResult> = {};
   const labourBuildErrors: Record<string, string> = {};
@@ -198,7 +204,7 @@ export function computeTenderEstimate(m: TenderInputs) {
   return {
     rows, qs, weather, weatherTool: toolOut, riskTruth: rtr, commercial, tender, consolidated: cons, reserve, reconciliation,
     reconciled: m.reference ? reconciliation.every((r) => r.ok) : null, edited: m.reference === null || m.reference === undefined,
-    schedule, scheduleIsAuto: autoSchedule || !!sched.auto, programme, scope, qaCounts,
+    schedule, scheduleIsAuto: autoSchedule || !!sched.auto, programme, scope, documents, qaCounts,
     registerSummary: statusSummary(register),
     labourBuilds,
     labourBuildErrors,

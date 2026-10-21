@@ -105,6 +105,8 @@ export interface Model {
   inputs: TenderInputs;
   /** The Submission package: tender letter, qualifications (in order) and alternatives; the package's id is "" until it is started */
   submission: { packageId: string; letter: SubmissionLetter | null; qualifications: SubmissionQualification[]; alternatives: SubmissionAlternative[] };
+  /** The Tender Documents package ("" until the document register is started). The documents, revisions and flags are in `estimate.documents`. */
+  documentsPackageId: string;
   /** What stops this tender issuing, and what is worth a look first */
   gates: { blockers: SubmissionGate[]; warnings: SubmissionGate[] };
 }
@@ -166,7 +168,7 @@ export function buildModel(records: ServerRecord[]): Model {
     commercial: inputs.commercial, overlays: inputs.overlays, overlap: String(inputs.overlap ?? "0"), reserveLinked: !!inputs.managementReserve, programme: inputs.programme ?? null,
     gantt: ganttProject, ganttRows, ganttSchedule: ganttProject ? G.schedule(ganttProject) : null, ganttPackageId: pkgOf.get("gantt:config") ?? "",
     ganttRecordIds: records.filter((r) => /^(gantt|gtask|gcal|gres|gasg):/.test(r.id)).map((r) => r.id),
-    inputs, gates: submissionGates(estimate), submission: submissionOf(records), programmeInfos: pInfos, syncStatus: ganttProject?.progLink && pInfos ? statusOf(reconcile(pInfos, ganttRows, ganttProject.minutesPerDay)) : null };
+    inputs, gates: submissionGates(estimate), submission: submissionOf(records), documentsPackageId: records.find((r) => r.data.kind === "tenderDoc" || r.data.kind === "tenderDocRev")?.packageId ?? "", programmeInfos: pInfos, syncStatus: ganttProject?.progLink && pInfos ? statusOf(reconcile(pInfos, ganttRows, ganttProject.minutesPerDay)) : null };
 }
 
 export const isBlocking = (flag: string) => BLOCKING.has(flag);
