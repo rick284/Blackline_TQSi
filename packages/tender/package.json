@@ -5,6 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@blackline/engine": "*"
+    "@blackline/engine": "*",
+    "exceljs": "4.4.0"
   }
 }

@@ -29,7 +29,7 @@ export const FIELDS = [
 ] as const;
 export type Field = (typeof FIELDS)[number];
 
-const LIMITS: Record<Field, number> = {
+export const LIMITS: Record<Field, number> = {
   ref: 30, risk_id: 30, consequence: 1500, driver: 120, cost_ref: 200, treatment: 1500, baseline_amount: 30, residual: 1500,
   mode: 40, qty: 30, unit: 20, unit_rate: 30, probability: 10, provision: 30, owner: 20, distinct: 5, target: 120, include: 5,
   overlap_group: 80, embedded: 600, evidence: 5, evidence_note: 600, integration_complete: 5, basis: 3000, action: 3000, source: 800,
