@@ -279,6 +279,14 @@ table.reg td.overdue { font-weight: 700; color: var(--black); }
 .exline select { width: 190px; height: 24px; border: 1px solid var(--line-strong); border-radius: 0; background: var(--paper); font: inherit; }
 @media (max-width: 1100px) { .levelgrid { grid-template-columns: 1fr; } }
 
+/* cost control */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--line-strong); border-bottom: 1px solid var(--line-strong); }
+.stat { background: var(--paper); padding: 8px 12px; display: flex; flex-direction: column; gap: 1px; }
+.stat span { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stat strong { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat small { color: var(--muted); }
+.pipeline .chip small { margin-left: 4px; }
+
 /* tender letter: on screen as a page, and the same page when printed */
 #print-root { display: none; }
 .letter-preview { background: var(--workspace); }

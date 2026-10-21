@@ -9,6 +9,7 @@ import * as co from "./repo/checkout.js";
 import { computeJobEstimate } from "./repo/estimate.js";
 import * as contacts from "./repo/contacts.js";
 import * as contracts_ from "./repo/contracts.js";
+import * as cost from "./repo/cost.js";
 import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
 import * as revisions from "./repo/revisions.js";
@@ -180,6 +181,37 @@ export function buildApp(db: Db): FastifyInstance {
   });
   app.post("/jobs/:jobId/contract", async (req) =>
     contracts_.updateTerms(db, ctx(req), idParam((req.params as any).jobId), parse(z.record(z.string(), z.string().max(2000)), req.body)));
+
+  // cost control: ledgers measured against the control budget (an awarded job only)
+  const J = (req: FastifyRequest) => idParam((req.params as any).jobId);
+  const rec = z.record(z.string(), z.any());
+  app.get("/jobs/:jobId/cost", async (req) => cost.costData(db, ctx(req), J(req)));
+  app.post("/jobs/:jobId/cost/commitments", async (req, reply) => reply.status(201).send(await cost.addCommitment(db, ctx(req), J(req), parse(rec, req.body))));
+  app.post("/jobs/:jobId/cost/actuals", async (req, reply) => reply.status(201).send(await cost.addActual(db, ctx(req), J(req), parse(rec, req.body))));
+  app.post("/jobs/:jobId/cost/:kind/:entryId/void", async (req, reply) => {
+    const { kind, entryId } = req.params as any;
+    if (!["commitments", "actuals", "claims"].includes(kind)) throw new HttpError(404, "not_found", "Not found.");
+    await cost.voidEntry(db, ctx(req), J(req), kind, idParam(entryId), parse(z.object({ reason: z.string().max(500) }), req.body).reason);
+    return reply.status(204).send();
+  });
+  app.post("/jobs/:jobId/cost/variations", async (req, reply) => reply.status(201).send(await cost.addVariation(db, ctx(req), J(req), parse(rec, req.body))));
+  app.post("/jobs/:jobId/cost/variations/:variationId", async (req, reply) => {
+    await cost.updateVariation(db, ctx(req), J(req), idParam((req.params as any).variationId), parse(rec, req.body));
+    return reply.status(204).send();
+  });
+  app.post("/jobs/:jobId/cost/variations/:variationId/decision", async (req, reply) => {
+    await cost.decideVariation(db, ctx(req), J(req), idParam((req.params as any).variationId), parse(z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().max(1000).optional() }), req.body));
+    return reply.status(204).send();
+  });
+  app.post("/jobs/:jobId/cost/forecast", async (req, reply) => {
+    await cost.setForecast(db, ctx(req), J(req), parse(rec, req.body));
+    return reply.status(204).send();
+  });
+  app.post("/jobs/:jobId/cost/claims", async (req, reply) => reply.status(201).send(await cost.addClaim(db, ctx(req), J(req), parse(rec, req.body))));
+  app.post("/jobs/:jobId/cost/claims/:claimId", async (req, reply) => {
+    await cost.updateClaim(db, ctx(req), J(req), idParam((req.params as any).claimId), parse(z.object({ status: z.enum(["draft", "submitted", "paid"]), on: z.string().max(10).optional(), paidAmount: z.string().max(40).optional() }), req.body));
+    return reply.status(204).send();
+  });
 
   // issued revisions: frozen, never edited, only superseded
   app.get("/jobs/:jobId/revisions", async (req) => revisions.listRevisions(db, ctx(req), idParam((req.params as any).jobId)));
