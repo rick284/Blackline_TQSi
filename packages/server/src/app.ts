@@ -7,6 +7,8 @@ import * as accounts from "./repo/accounts.js";
 import { listAudit } from "./repo/audit.js";
 import * as co from "./repo/checkout.js";
 import { computeJobEstimate } from "./repo/estimate.js";
+import * as contacts from "./repo/contacts.js";
+import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
 import * as revisions from "./repo/revisions.js";
 
@@ -97,9 +99,30 @@ export function buildApp(db: Db): FastifyInstance {
 
   // ---- jobs
   app.get("/jobs", async (req) => jobs.listJobs(db, ctx(req)));
+  const enquiryFields = {
+    contactId: id.nullable().optional(), ownerId: id.nullable().optional(), dueAt: z.string().max(40).nullable().optional(),
+    notes: z.string().max(2000).optional(), approxValue: z.string().max(40).optional(),
+  };
   app.post("/jobs", async (req, reply) => {
-    const v = parse(z.object({ name: z.string().trim().min(1).max(200), client: z.string().trim().max(200).optional() }), req.body);
+    const v = parse(z.object({ name: z.string().trim().min(1).max(200), client: z.string().trim().max(200).optional(), ...enquiryFields }), req.body);
     return reply.status(201).send(await jobs.createJob(db, ctx(req), v));
+  });
+
+  // ---- contacts (company-wide) and the enquiry register (the job record itself)
+  const contactFields = {
+    name: z.string().max(200).optional(), kind: z.string().max(20).optional(), person: z.string().max(200).optional(), phone: z.string().max(40).optional(),
+    email: z.string().max(200).optional(), trade: z.string().max(200).optional(), notes: z.string().max(2000).optional(),
+  };
+  app.get("/contacts", async (req) => contacts.listContacts(db, ctx(req), { archived: (req.query as any)?.archived === "1" }));
+  app.post("/contacts", async (req, reply) => reply.status(201).send(await contacts.createContact(db, ctx(req), parse(z.object(contactFields), req.body))));
+  app.post("/contacts/:contactId", async (req) => contacts.updateContact(db, ctx(req), idParam((req.params as any).contactId), parse(z.object(contactFields), req.body)));
+  app.post("/contacts/:contactId/archive", async (req) => contacts.setArchived(db, ctx(req), idParam((req.params as any).contactId), true));
+  app.post("/contacts/:contactId/restore", async (req) => contacts.setArchived(db, ctx(req), idParam((req.params as any).contactId), false));
+  app.get("/contacts/:contactId/history", async (req) => contacts.contactHistory(db, ctx(req), idParam((req.params as any).contactId)));
+  app.post("/jobs/:jobId/enquiry", async (req) => enquiries.updateEnquiry(db, ctx(req), idParam((req.params as any).jobId), parse(z.object(enquiryFields), req.body)));
+  app.post("/jobs/:jobId/decision", async (req) => {
+    const v = parse(z.object({ decision: z.enum(["go", "no-bid", "lost", "reopen"]), reason: z.string().max(1000).optional() }), req.body);
+    return enquiries.decide(db, ctx(req), idParam((req.params as any).jobId), v);
   });
   app.get("/jobs/:jobId", async (req) => jobs.getJob(db, ctx(req), idParam((req.params as any).jobId)));
   app.get("/jobs/:jobId/packages", async (req) => jobs.listPackages(db, ctx(req), idParam((req.params as any).jobId)));

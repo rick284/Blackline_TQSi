@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
-import { hrefJob, hrefJobs, type View } from "../route.js";
+import { hrefContacts, hrefJob, hrefJobs, type View } from "../route.js";
 import { useSession } from "../session.js";
 import { useWorkspace } from "../workspace.js";
 import { CommercialReview } from "./CommercialReview.js";
@@ -26,7 +26,7 @@ const MODULES: { view: View; label: string }[] = [
   { view: "parked", label: "Parked changes" },
   { view: "summary", label: "Summary" },
 ];
-const LATER = ["Contacts and Enquiries", "Tender Documents", "Tender Procurement", "Contract Setup", "Cost Control"];
+const LATER = ["Tender Documents", "Tender Procurement", "Contract Setup", "Cost Control"];
 
 export function Job({ jobId, view }: { jobId: string; view: View }) {
   const { session } = useSession();
@@ -44,6 +44,8 @@ export function Job({ jobId, view }: { jobId: string; view: View }) {
           {m.view === "parked" && ws.parked.length > 0 && <small className="badge solid">{ws.parked.length}</small>}
         </a>
       ))}
+      <h6>Company</h6>
+      <a href={hrefContacts("enquiries")}>Contacts and Enquiries</a>
       <h6>Coming later</h6>
       {LATER.map((m) => <span key={m} className="later">{m}</span>)}
     </nav>

@@ -2,35 +2,51 @@ import type { RecordData, SeedPackage } from "@blackline/tender";
 import type { Db } from "../db.js";
 import { type Ctx, HttpError, requireRole } from "../errors.js";
 import { audit } from "./audit.js";
+import { updateEnquiry } from "./enquiries.js";
 
+/** A job is also the enquiry: the register fields travel with it from the first phone call to the issued tender. */
 export interface Job {
   id: string;
   name: string;
   client: string;
   status: string;
   created_at: string;
+  contact_id: string | null;
+  due_at: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
+  notes: string;
+  approx_value: string;
+  decision_reason: string;
+  decided_at: string | null;
 }
 
-const JOB_COLS = "id, name, client, status, created_at";
+/** The client shown is the linked contact's current name, so renaming a contact renames it everywhere; otherwise the name typed on the job. */
+export const JOB_SELECT = `select j.id, j.name, coalesce(c.name, j.client) as client, j.status, j.created_at, j.contact_id, j.due_at, j.owner_id, ou.name as owner_name,
+  j.notes, j.approx_value, j.decision_reason, j.decided_at
+  from jobs j left join contacts c on c.id = j.contact_id and c.org_id = j.org_id left join users ou on ou.id = j.owner_id`;
 
-export async function createJob(db: Db, ctx: Ctx, v: { name: string; client?: string }): Promise<Job> {
+export interface NewJob { name: string; client?: string; contactId?: string | null; dueAt?: string | null; ownerId?: string | null; notes?: string; approxValue?: string }
+
+export async function createJob(db: Db, ctx: Ctx, v: NewJob): Promise<Job> {
   requireRole(ctx, "estimator");
   return db.tx(async (t) => {
     if ((await t.query("select 1 from jobs where org_id = $1 and name = $2", [ctx.orgId, v.name])).rows.length)
       throw new HttpError(409, "job_exists", "A job with that name already exists.");
-    const job = (await t.query<Job>(`insert into jobs (org_id, name, client, created_by) values ($1, $2, $3, $4) returning ${JOB_COLS}`, [ctx.orgId, v.name, v.client ?? "", ctx.userId])).rows[0]!;
-    await audit(t, ctx, "job.created", { jobId: job.id, detail: { name: v.name } });
-    return job;
+    const id = (await t.query<{ id: string }>("insert into jobs (org_id, name, client, created_by) values ($1, $2, $3, $4) returning id", [ctx.orgId, v.name, v.client ?? "", ctx.userId])).rows[0]!.id;
+    await audit(t, ctx, "job.created", { jobId: id, detail: { name: v.name } });
+    const { name: _n, client: _c, ...fields } = v;
+    return Object.keys(fields).length ? updateEnquiry(t, ctx, id, fields, { quiet: true }) : getJob(t, ctx, id);
   });
 }
 
 export async function listJobs(db: Db, ctx: Ctx): Promise<Job[]> {
-  return (await db.query<Job>(`select ${JOB_COLS} from jobs where org_id = $1 order by created_at desc`, [ctx.orgId])).rows;
+  return (await db.query<Job>(`${JOB_SELECT} where j.org_id = $1 order by j.created_at desc`, [ctx.orgId])).rows;
 }
 
 /** 404 for a job in another company, exactly as for one that does not exist: nothing reveals that it is there. */
 export async function getJob(db: Db, ctx: Ctx, jobId: string): Promise<Job> {
-  const job = (await db.query<Job>(`select ${JOB_COLS} from jobs where id = $1 and org_id = $2`, [jobId, ctx.orgId])).rows[0];
+  const job = (await db.query<Job>(`${JOB_SELECT} where j.id = $1 and j.org_id = $2`, [jobId, ctx.orgId])).rows[0];
   if (!job) throw new HttpError(404, "not_found", "Job not found.");
   return job;
 }

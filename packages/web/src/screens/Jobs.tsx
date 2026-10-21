@@ -3,7 +3,7 @@ import type { ColDef } from "ag-grid-community";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api.js";
 import { gridTheme } from "../grid.js";
-import { hrefJob } from "../route.js";
+import { hrefContacts, hrefJob } from "../route.js";
 import { useSession } from "../session.js";
 import { Shell } from "./Shell.js";
 
@@ -46,6 +46,7 @@ export function Jobs() {
           <input placeholder="New tender: job name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <input placeholder="Client" value={form.client} onChange={(e) => setForm({ ...form, client: e.target.value })} />
           <button className="btn primary">Create tender</button>
+          <span style={{ marginLeft: "auto" }}><a href={hrefContacts("enquiries")}>Contacts and Enquiries</a></span>
         </form>
       )}
       {error && <div className="notice error">{error}</div>}
