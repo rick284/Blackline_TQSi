@@ -10,6 +10,7 @@ import { api, ApiError, useConnection } from "./api.js";
 import { addRecord, changeSetOf, countChanges, deleteRecord, discardPackage, editRecord, effectiveRecords, setRecord, type Drafts, type ServerRecord } from "./lib/draft.js";
 import type { Parked } from "./lib/parked.js";
 import { kv } from "./lib/kv.js";
+import * as history from "./lib/history.js";
 import { buildModel, nextUid } from "./lib/model.js";
 import { flushQueue, type SendOutcome } from "./lib/queue.js";
 import type { Session } from "./session.js";
@@ -53,6 +54,47 @@ export function useWorkspace(jobId: string, session: Session) {
   const packagesRef = useRef(packages);
   packagesRef.current = packages;
   const persist = useCallback((next: Saved) => { savedRef.current = next; setSaved(next); write(wsKey(jobId), next); }, [jobId]);
+
+  // Undo and redo: every change to the drafts remembers what they were. A package that is checked in or released drops its drafts, so the
+  // history is cleared then (an undo must never bring back drafts of a package that is no longer yours). Kept in memory only.
+  const hist = useRef(history.empty<Drafts>());
+  const [, bumpHistory] = useState(0);
+  const commit = useCallback((next: Drafts) => {
+    const before = savedRef.current.drafts;
+    if (JSON.stringify(before) === JSON.stringify(next)) return;
+    hist.current = history.record(hist.current, before);
+    bumpHistory((n) => n + 1);
+    persist({ ...savedRef.current, drafts: next });
+  }, [persist]);
+  const forgetHistory = useCallback(() => { hist.current = history.empty<Drafts>(); bumpHistory((n) => n + 1); }, []);
+  const undo = useCallback(() => {
+    const r = history.undo(hist.current, savedRef.current.drafts);
+    if (!r) return;
+    hist.current = r.history;
+    bumpHistory((n) => n + 1);
+    persist({ ...savedRef.current, drafts: r.value });
+  }, [persist]);
+  const redo = useCallback(() => {
+    const r = history.redo(hist.current, savedRef.current.drafts);
+    if (!r) return;
+    hist.current = r.history;
+    bumpHistory((n) => n + 1);
+    persist({ ...savedRef.current, drafts: r.value });
+  }, [persist]);
+
+  // Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z): not while typing in a box, where the box has its own undo
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [undo, redo]);
 
   const load = useCallback(async () => {
     try {
@@ -113,16 +155,18 @@ export function useWorkspace(jobId: string, session: Session) {
     try {
       const r = await api<{ version: number }>("POST", `/packages/${id}/checkin`, { baseVersion: base, upserts, deletes });
       persist(dropHeld(savedRef.current, id));
+      forgetHistory();
       return { kind: "ok", version: r.version };
     } catch (e) {
       if (e instanceof ApiError && e.status === 0) return { kind: "offline" };
       if (e instanceof ApiError && e.status === 409 && e.extra.parkedId) {
         persist(dropHeld(savedRef.current, id));
+        forgetHistory();
         return { kind: "refused", message: e.message };
       }
       return { kind: "error", message: e instanceof ApiError ? e.message : String(e) };
     }
-  }, [persist]);
+  }, [persist, forgetHistory]);
 
   const say = (name: string, o: SendOutcome): Notice =>
     o.kind === "ok" ? { kind: "info", text: `${name} checked in as version ${o.version}. The lock is released.` }
@@ -193,9 +237,10 @@ export function useWorkspace(jobId: string, session: Session) {
   const doRelease = useCallback((id: string) => run(async () => {
     await api("POST", `/packages/${id}/release`);
     persist(dropHeld(savedRef.current, id));
+    forgetHistory();
     await load();
     setNotice({ kind: "info", text: "Released. The package is free for others." });
-  }), [run, persist, load]);
+  }), [run, persist, load, forgetHistory]);
 
   const release = useCallback((id: string) => {
     if (countChanges(savedRef.current.drafts, id)) setAsk({ text: "Discard your unsaved changes and release this package?", label: "Discard and release", go: () => void doRelease(id) });
@@ -216,8 +261,8 @@ export function useWorkspace(jobId: string, session: Session) {
   // ---- drafting (always local; the server is only told at check-in)
   const edit = useCallback((packageId: string, recordId: string, fn: (body: any) => any) => {
     if (!records || !canEdit(packageId)) return;
-    persist({ ...savedRef.current, drafts: editRecord(savedRef.current.drafts, records, packageId, recordId, fn) });
-  }, [records, canEdit, persist]);
+    commit(editRecord(savedRef.current.drafts, records, packageId, recordId, fn));
+  }, [records, canEdit, commit]);
 
   const addRow = useCallback((packageId: string, qsCode: string) => {
     if (!records || !canEdit(packageId)) return;
@@ -229,21 +274,21 @@ export function useWorkspace(jobId: string, session: Session) {
       body: { qsCode, mode: "Lump Sum / Quote", resourceType: "Subcontract", resourceCode: "", manualQty: "1", count: null, productivityRate: null, durationOverrideHrs: null,
               utilisation: null, waste: null, jobRateOverride: null, task: "", verified: "No", weatherExposed: "", weatherTaskType: "", uid },
     };
-    persist({ ...savedRef.current, drafts: addRecord(savedRef.current.drafts, packageId, `row:${uid}`, data) });
-  }, [records, canEdit, effective, persist]);
+    commit(addRecord(savedRef.current.drafts, packageId, `row:${uid}`, data));
+  }, [records, canEdit, effective, commit]);
 
   /** Put a whole record (or its deletion) into the draft, for bringing a parked change across. */
   const adopt = useCallback((packageId: string, recordId: string, data: RecordData | null) => {
     if (!records || !canEdit(packageId)) return;
-    persist({ ...savedRef.current, drafts: setRecord(savedRef.current.drafts, records, packageId, recordId, data) });
-  }, [records, canEdit, persist]);
+    commit(setRecord(savedRef.current.drafts, records, packageId, recordId, data));
+  }, [records, canEdit, commit]);
 
   const addRate = useCallback((packageId: string, code: string) => {
     if (!records || !canEdit(packageId)) return;
     const seq = 1 + Math.max(0, ...effective.filter((r) => r.data.kind === "library").map((r) => r.data.seq ?? 0));
     const data: RecordData = { kind: "library", seq, body: { code, description: "", unit: "", baseRate: "0", category: "", operatorIncluded: "", fuelIncluded: "", source: "" } };
-    persist({ ...savedRef.current, drafts: addRecord(savedRef.current.drafts, packageId, `library:${code}`, data) });
-  }, [records, canEdit, effective, persist]);
+    commit(addRecord(savedRef.current.drafts, packageId, `library:${code}`, data));
+  }, [records, canEdit, effective, commit]);
 
   const record = useCallback((id: string) => effective.find((r) => r.id === id)?.data, [effective]);
   const nextSeq = useCallback((kind: string) => 1 + Math.max(0, ...effective.filter((r) => r.data.kind === kind).map((r) => r.data.seq ?? 0)), [effective]);
@@ -252,19 +297,20 @@ export function useWorkspace(jobId: string, session: Session) {
   const saveLabour = useCallback((packageId: string, code: string, library: RecordData, build: RecordData) => {
     if (!records || !canEdit(packageId)) return;
     const d = setRecord(setRecord(savedRef.current.drafts, records, packageId, `library:${code}`, library), records, packageId, `labour:${code}`, build);
-    persist({ ...savedRef.current, drafts: d });
-  }, [records, canEdit, persist]);
+    commit(d);
+  }, [records, canEdit, commit]);
 
   const removeRow = useCallback((packageId: string, recordId: string) => {
     if (!records || !canEdit(packageId)) return;
-    persist({ ...savedRef.current, drafts: deleteRecord(savedRef.current.drafts, records, packageId, recordId) });
-  }, [records, canEdit, persist]);
+    commit(deleteRecord(savedRef.current.drafts, records, packageId, recordId));
+  }, [records, canEdit, commit]);
 
   return {
     loading, fromCache, records, packages, parked, model, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,
+    undo, redo, canUndo: hist.current.past.length > 0, canRedo: hist.current.future.length > 0,
     heldByMe: packages.filter((p) => p.lock?.holder === session.userId),
     notify: setNotice, isMine, canEdit, pkg, load, checkOut, checkIn, cancelQueued, release, breakLock, resolveParked, edit, adopt, addRow, removeRow, addRate, saveLabour, record, nextSeq, removeRate: removeRow, dismiss: () => setNotice(null),
   };
