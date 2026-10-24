@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 
 export type View = "estimate" | "packages" | "rates" | "scope" | "commercial" | "programme" | "gantt" | "submission" | "documents" | "procurement" | "contract" | "cost" | "parked" | "summary";
 export type ContactsTab = "enquiries" | "contacts";
-export type Route = { page: "jobs" } | { page: "contacts"; tab: ContactsTab } | { page: "job"; jobId: string; view: View };
+export type Route = { page: "jobs" } | { page: "library" } | { page: "contacts"; tab: ContactsTab } | { page: "job"; jobId: string; view: View };
 
 const VIEWS: View[] = ["estimate", "packages", "rates", "scope", "commercial", "programme", "gantt", "submission", "documents", "procurement", "contract", "cost", "parked", "summary"];
 
 export function parseHash(hash: string): Route {
+  if (/^#\/library\/?$/.test(hash)) return { page: "library" };
   const c = /^#\/contacts(?:\/(\w+))?$/.exec(hash);
   if (c) return { page: "contacts", tab: c[1] === "contacts" ? "contacts" : "enquiries" };
   const m = /^#\/jobs\/([^/]+)(?:\/(\w+))?$/.exec(hash);
@@ -16,6 +17,7 @@ export function parseHash(hash: string): Route {
 }
 
 export const hrefJobs = () => "#/";
+export const hrefLibrary = () => "#/library";
 export const hrefContacts = (tab: ContactsTab = "enquiries") => `#/contacts/${tab}`;
 export const hrefJob = (jobId: string, view: View = "estimate") => `#/jobs/${jobId}/${view}`;
 

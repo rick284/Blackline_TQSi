@@ -2,7 +2,10 @@ import { AgGridReact } from "ag-grid-react";
 import type { ColDef, ColGroupDef, GridApi } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { gridTheme, monoCell } from "../grid.js";
+import { api, ApiError } from "../api.js";
 import { parseNumberCell } from "../lib/draft.js";
+import { libraryBody, toCompanyInput } from "../lib/rateLibrary.js";
+import { useCompanyRates } from "../lib/useCompanyRates.js";
 import { money, num } from "../lib/fmt.js";
 import type { LibraryRow } from "../lib/model.js";
 import type { Workspace } from "../workspace.js";
@@ -26,7 +29,7 @@ const blank = (): Row => ({ recordId: NEW, packageId: "", code: "", category: ""
  */
 export function Rates({ ws }: { ws: Workspace }) {
   const model = ws.model!;
-  const pkgId = model.libraryPackageId;
+  const pkgId = ws.libraryPackageId;
   const editable = ws.canEdit(pkgId);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -34,6 +37,8 @@ export function Rates({ ws }: { ws: Workspace }) {
   const [justAdded, setJustAdded] = useState<string | null>(null);
   /** The labour builder, open under the grid: for a new rate (code null) or the build behind a built rate */
   const [builder, setBuilder] = useState<{ code: string | null } | null>(null);
+  const { rates: companyRates, reload: reloadCompany } = useCompanyRates();
+  const [fromCompany, setFromCompany] = useState("");
   const gridApi = useRef<GridApi<Row> | null>(null);
   const accepted = useRef(false);
 
@@ -124,6 +129,27 @@ export function Rates({ ws }: { ws: Workspace }) {
   ];
 
   const sel = model.library.find((r) => r.code === selected);
+  const notHere = companyRates.filter((c) => !model.library.some((r) => r.code.toLowerCase() === c.code.toLowerCase()));
+
+  /** Copy a company rate into this job's library: the job then prices from its own copy. */
+  const bringIn = (codes: string[]) => {
+    const picked = notHere.filter((c) => codes.includes(c.code));
+    if (!picked.length) return;
+    ws.batch(pkgId, picked.map((c, i) => ({ recordId: `library:${c.code}`, data: { kind: "library", seq: ws.nextSeq("library") + i, body: libraryBody(c) } })));
+    setFromCompany("");
+    ws.notify({ kind: "info", text: `${picked.length === 1 ? picked[0]!.code : `${picked.length} rates`} copied into this job's library.` });
+  };
+
+  /** Add this job's rates to the company library (codes the company already has are left as they are). */
+  const saveToCompany = async (rows: LibraryRow[]) => {
+    const input = rows.map(toCompanyInput).filter((r): r is NonNullable<typeof r> => !!r);
+    if (!input.length) { ws.notify({ kind: "warn", text: "There is nothing to add." }); return; }
+    try {
+      const r = await api<{ added: number; skipped: number }>("POST", "/rates/bulk", { rates: input });
+      ws.notify({ kind: "info", text: `${r.added} added to the company library${r.skipped ? `; ${r.skipped} already there, left as they are` : ""}.` });
+      await reloadCompany();
+    } catch (e) { ws.notify({ kind: "warn", text: e instanceof ApiError ? (e.status === 0 ? "You are offline. This needs a connection." : e.message) : "Could not save to the company library." }); }
+  };
   if (!pkgId) return <div className="empty">This job has no rate library yet.</div>;
   void canType;
 
@@ -134,6 +160,14 @@ export function Rates({ ws }: { ws: Workspace }) {
         <button className="btn" disabled={!editable || !sel || sel.usedBy > 0 || sel.built} title={sel?.built ? "A built labour rate stays so its build-up is kept" : sel && sel.usedBy > 0 ? "This rate is in use" : ""} onClick={() => { if (sel) { ws.removeRate(sel.packageId, sel.recordId); setSelected(null); } }}>Delete rate</button>
         <button className="btn" disabled={!editable || !!builder} onClick={() => setBuilder({ code: null })} title="Work out a labour rate from what the employer really pays">Build labour rate</button>
         <button className="btn" disabled={!sel?.built || !!builder} onClick={() => sel && setBuilder({ code: sel.code })} title={sel?.built ? "" : "Select a rate made with the labour builder"}>Build-up</button>
+        <select value={fromCompany} aria-label="Company library" disabled={!editable || notHere.length === 0} onChange={(e) => setFromCompany(e.target.value)} style={{ height: 24, border: "1px solid var(--line-strong)", borderRadius: 0, background: "var(--paper)", font: "inherit", maxWidth: 200 }}>
+          <option value="">{notHere.length === 0 ? "Company library: nothing new" : "From company library…"}</option>
+          {notHere.map((c) => <option key={c.id} value={c.code}>{c.code} {c.description}</option>)}
+        </select>
+        <button className="btn" disabled={!editable || !fromCompany} onClick={() => bringIn([fromCompany])} title="Copy that rate into this job's library">Bring in</button>
+        <button className="btn" disabled={!editable || notHere.length === 0} onClick={() => bringIn(notHere.map((c) => c.code))} title="Copy every company rate this job doesn't have">Bring in all</button>
+        <button className="btn" disabled={!sel} onClick={() => sel && void saveToCompany([sel])} title="Keep this rate in the company library for other estimates">Save to company</button>
+        <button className="btn" disabled={model.library.length === 0} onClick={() => void saveToCompany(model.library)} title="Add all of this job's rates the company library doesn't have yet">Save all to company</button>
         <input className="find" placeholder="Find a rate" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Find a rate" />
       </PackageBar>
       {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}

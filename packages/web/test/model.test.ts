@@ -41,6 +41,15 @@ describe("workbench model", () => {
     expect(m.buildups.get("EW01")![0]!.rowId).toBe("EW01-001");
   });
 
+  it("shows a row's own description over the library's, and the library's again once it is cleared", () => {
+    const server = asServer(tiny);
+    const own = editRecord({}, server, "pkg-0-qs:Earthworks", "row:EW01-001", (b) => ({ ...b, description: "  Strip and stockpile topsoil " }));
+    expect(buildModel(effectiveRecords(server, {})).buildups.get("EW01")![0]!.resource).toBe("Subcontract");
+    expect(buildModel(effectiveRecords(server, own)).buildups.get("EW01")![0]!.resource).toBe("Strip and stockpile topsoil");
+    const cleared = editRecord(own, server, "pkg-0-qs:Earthworks", "row:EW01-001", (b) => ({ ...b, description: "" }));
+    expect(buildModel(effectiveRecords(server, cleared)).buildups.get("EW01")![0]!.resource).toBe("Subcontract");
+  });
+
   it("recalculates the whole job from one edited cell, and drafts do not touch the server records", () => {
     const server = asServer(tiny);
     const before = buildModel(effectiveRecords(server, {}));

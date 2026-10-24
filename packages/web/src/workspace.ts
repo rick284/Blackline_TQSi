@@ -293,7 +293,7 @@ export function useWorkspace(jobId: string, session: Session) {
     const data: RecordData = {
       kind: "row", seq,
       body: { qsCode, mode: "Lump Sum / Quote", resourceType: "Subcontract", resourceCode: "", manualQty: "1", count: null, productivityRate: null, durationOverrideHrs: null,
-              utilisation: null, waste: null, jobRateOverride: null, task: "", verified: "No", weatherExposed: "", weatherTaskType: "", uid },
+              utilisation: null, waste: null, jobRateOverride: null, task: "", description: "", verified: "No", weatherExposed: "", weatherTaskType: "", uid },
     };
     commit(addRecord(savedRef.current.drafts, packageId, `row:${uid}`, data));
   }, [records, canEdit, effective, commit]);
@@ -360,7 +360,7 @@ export function useWorkspace(jobId: string, session: Session) {
   const confirm = useCallback((text: string, label: string, go: () => void) => setAsk({ text, label, go }), []);
 
   return {
-    jobId, loading, fromCache, records, packages, parked, model, modelError, drafts, notice, busy, queued, ask, answer,
+    jobId, loading, fromCache, libraryPackageId: packages.find((p) => p.kind === "library")?.id ?? "", records, packages, parked, model, modelError, drafts, notice, busy, queued, ask, answer,
     changes: (id?: string) => countChanges(drafts, id),
     totalChanges: countChanges(drafts),
     queuedCount: waiting,

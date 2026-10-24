@@ -9,7 +9,11 @@ import { parseNumberCell } from "../lib/draft.js";
 import { money, num } from "../lib/fmt.js";
 import { isBlocking, total, type BuildupRow, type QsRow } from "../lib/model.js";
 import { newQsItem, qsDeletion } from "../lib/qs.js";
+import { libraryBody, pickList, typeOfCategory } from "../lib/rateLibrary.js";
+import { useCompanyRates } from "../lib/useCompanyRates.js";
+import { NewResource } from "./NewResource.js";
 import { PackageBar } from "./PackageBar.js";
+import { RateEditor } from "./RateEditor.js";
 import { StartTender } from "./StartTender.js";
 import type { Workspace } from "../workspace.js";
 
@@ -55,6 +59,9 @@ export function Workbench({ ws }: { ws: Workspace }) {
   const [addTarget, setAddTarget] = useState<string | null>(null);
   const [newSection, setNewSection] = useState<{ open: boolean; name: string }>({ open: false, name: "" });
   const accepted = useRef(false);
+  // the company resource library, and the panel for a resource that is in neither library yet
+  const { rates: companyRates, reload: reloadRates } = useCompanyRates();
+  const [showNew, setShowNew] = useState(false);
   useEffect(() => {
     if (!addingItem) return;
     accepted.current = false;
@@ -115,7 +122,37 @@ export function Workbench({ ws }: { ws: Workspace }) {
       ws.checkOut(r.packageId);
     } catch (e) { ws.notify({ kind: "warn", text: e instanceof ApiError ? e.message : "The section could not be added." }); }
   };
+  const libId = ws.libraryPackageId;
+  const picks = useMemo(() => pickList(model.library, companyRates), [model.library, companyRates]);
+
+  /**
+   * Put a library code on a build-up row. A rate the job already has is just named; one that only the company library has is copied into the job's
+   * Rate Library in the same step (one undo), which needs that package checked out. A code that is in neither is kept as typed and flagged.
+   */
+  const applyPick = (row: RowData, typed: string) => {
+    const code = typed.trim();
+    const rec = ws.record(row.recordId);
+    if (!rec) return false;
+    const pick = picks.find((p) => p.code.toLowerCase() === code.toLowerCase());
+    const useCode = pick?.code ?? code;
+    const type = pick ? typeOfCategory(pick.category) : null;
+    const body = { ...(rec.body as object), resourceCode: useCode, ...(type ? { resourceType: type } : {}) };
+    if (pick?.fromCompany) {
+      const c = companyRates.find((x) => x.code.toLowerCase() === useCode.toLowerCase());
+      if (!c) return false;
+      if (!libId || !ws.canEdit(libId)) { ws.notify({ kind: "warn", text: `${c.code} is in the company library. Check out this job's Rate Library (the second bar) to bring it in, then pick it again.` }); return false; }
+      ws.batchMulti([
+        { packageId: libId, recordId: `library:${c.code}`, data: { kind: "library", seq: ws.nextSeq("library"), body: libraryBody(c) } },
+        { packageId: row.packageId, recordId: row.recordId, data: { ...rec, body } },
+      ]);
+      ws.notify({ kind: "info", text: `${c.code} copied into this job's Rate Library at ${num(c.baseRate, 4)}.` });
+      return false;
+    }
+    ws.edit(row.packageId, row.recordId, () => body);
+    return false;
+  };
   const buildRows = useMemo(() => (selectedQs ? (model.buildups.get(selectedQs) ?? []).map(rowData) : []), [model, selectedQs]);
+  const selectedBuildRow = buildRows.find((x) => x.rowId === selectedRow) ?? null;
 
   const textQs = (field: "description" | "unit", headerName: string, o: Partial<ColDef<QsData>> = {}): ColDef<QsData> => ({
     field, headerName,
@@ -192,8 +229,21 @@ export function Workbench({ ws }: { ws: Workspace }) {
       { field: "rowId", headerName: "ID", width: 100, cellClass: "mono" },
       textCol("task", "Task", { flex: 1, minWidth: 150 }),
       textCol("resourceType", "Type", { width: 104, cellEditor: "agSelectCellEditor", cellEditorParams: { values: RESOURCE_TYPES } }),
-      textCol("resourceCode", "Resource", { width: 104, cellClass: (p) => (editable ? "cell-input mono" : "mono") }),
-      { field: "resource", headerName: "Description", flex: 1, minWidth: 150 },
+      textCol("resourceCode", "Resource", {
+        width: 120, cellClass: (p) => (editable ? "cell-input mono" : "mono"), cellEditor: RateEditor, cellEditorPopup: true, cellEditorParams: { picks },
+        suppressKeyboardEvent: (p) => p.editing && ["Enter", "Tab", "ArrowUp", "ArrowDown"].includes(p.event.key),
+        valueSetter: (p) => applyPick(p.data, String(p.newValue ?? "")),
+      }),
+      {
+        field: "resource", headerName: "Description", flex: 1, minWidth: 180, editable: () => editable, cellClass: () => (editable ? "cell-input" : "cell-locked"),
+        valueSetter: (p) => {
+          // the row's own words; typing what the library already says (or nothing) goes back to following the library
+          const typed = s(p.newValue).trim();
+          const own = model.library.find((l) => l.code === p.data.resourceCode)?.description ?? "";
+          ws.edit(p.data.packageId, p.data.recordId, (b) => ({ ...b, description: typed === own ? "" : typed }));
+          return false;
+        },
+      },
     ] },
     { headerName: "Method", children: [textCol("mode", "Calculation", { width: 140, cellEditor: "agSelectCellEditor", cellEditorParams: { values: MODES } })] },
     { headerName: "Inputs", children: [
@@ -250,8 +300,10 @@ export function Workbench({ ws }: { ws: Workspace }) {
         <button className="btn" disabled={!canAdd || addingItem} onClick={() => setAddingItem(true)} title={targetPkg && !canAdd ? "Check out this section first" : "A new takeoff item in the chosen section"}>Add item</button>
         <button className="btn" disabled={!editable || !selectedQs} onClick={deleteItem}>Delete item</button>
         <button className="btn" disabled={!editable || !selectedQs} onClick={() => selectedQs && ws.addRow(pkgId, selectedQs)}>Add row</button>
+        <button className="btn" disabled={!libId || !ws.canEdit(libId) || showNew} onClick={() => setShowNew(true)} title={libId && !ws.canEdit(libId) ? "Check out the Rate Library first (the second bar)" : "A resource that is not in either library yet: it is saved to the library for next time"}>New resource</button>
         <button className="btn" disabled={!editable || !selectedRow} onClick={() => { const r = buildRows.find((x) => x.rowId === selectedRow); if (r) { ws.removeRow(r.packageId, r.recordId); setSelectedRow(null); } }}>Delete row</button>
       </PackageBar>
+      {libId && <PackageBar ws={ws} pkgId={libId} bare quiet />}
       {ws.notice && <div className={`notice ${ws.notice.kind}`} role="alert">{ws.notice.text}<button onClick={ws.dismiss}>Dismiss</button></div>}
       {!ws.notice && orphan && <div className="notice warn">${money(model.orphanCost)} of build-up cost has no QS item. It is in the price; assign or remove those rows.</div>}
       <div className="workbench">
@@ -273,7 +325,7 @@ export function Workbench({ ws }: { ws: Workspace }) {
           <h3>Resource build-up <span className="sub">{selectedQs} · {items.find((i) => i.code === selectedQs)?.description} · {buildRows.length} rows</span></h3>
           <div className="grid">
             {buildRows.length === 0 ? (
-              <div className="empty">No build-up rows for this item.{editable ? " Use Add row." : ""}</div>
+              <div className="empty">No build-up rows for this item.{editable ? " Use Add row, then pick a resource from the library." : ""}</div>
             ) : (
               <AgGridReact<RowData>
                 key={selectedQs} theme={gridTheme} rowData={buildRows} columnDefs={buildCols} getRowId={(p) => p.data.recordId} animateRows={false} suppressMovableColumns singleClickEdit stopEditingWhenCellsLoseFocus
@@ -282,6 +334,10 @@ export function Workbench({ ws }: { ws: Workspace }) {
               />
             )}
           </div>
+          {showNew && libId && (
+            <NewResource ws={ws} libraryId={libId} target={selectedBuildRow ? { packageId: selectedBuildRow.packageId, recordId: selectedBuildRow.recordId } : null}
+              codes={model.library.map((l) => l.code)} onSavedToCompany={() => void reloadRates()} onClose={() => setShowNew(false)} />
+          )}
         </section>
       </div>
     </>

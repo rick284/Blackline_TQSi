@@ -19,11 +19,12 @@ export interface Job {
   approx_value: string;
   decision_reason: string;
   decided_at: string | null;
+  archived_at: string | null;
 }
 
 /** The client shown is the linked contact's current name, so renaming a contact renames it everywhere; otherwise the name typed on the job. */
 export const JOB_SELECT = `select j.id, j.name, coalesce(c.name, j.client) as client, j.status, j.created_at, j.contact_id, j.due_at, j.owner_id, ou.name as owner_name,
-  j.notes, j.approx_value, j.decision_reason, j.decided_at
+  j.notes, j.approx_value, j.decision_reason, j.decided_at, j.archived_at
   from jobs j left join contacts c on c.id = j.contact_id and c.org_id = j.org_id left join users ou on ou.id = j.owner_id`;
 
 export interface NewJob { name: string; client?: string; contactId?: string | null; dueAt?: string | null; ownerId?: string | null; notes?: string; approxValue?: string }
@@ -40,8 +41,8 @@ export async function createJob(db: Db, ctx: Ctx, v: NewJob): Promise<Job> {
   });
 }
 
-export async function listJobs(db: Db, ctx: Ctx): Promise<Job[]> {
-  return (await db.query<Job>(`${JOB_SELECT} where j.org_id = $1 order by j.created_at desc`, [ctx.orgId])).rows;
+export async function listJobs(db: Db, ctx: Ctx, o: { archived?: boolean } = {}): Promise<Job[]> {
+  return (await db.query<Job>(`${JOB_SELECT} where j.org_id = $1 ${o.archived ? "" : "and j.archived_at is null"} order by j.created_at desc`, [ctx.orgId])).rows;
 }
 
 /** 404 for a job in another company, exactly as for one that does not exist: nothing reveals that it is there. */
@@ -151,4 +152,44 @@ export async function jobRecords(db: Db, ctx: Ctx, jobId: string): Promise<{ id:
     `select r.record_id as id, r.data
        from package_records r join packages p on p.id = r.package_id and p.org_id = r.org_id
       where p.job_id = $1 and p.org_id = $2`, [jobId, ctx.orgId])).rows;
+}
+
+/** Archiving takes a job out of the register without touching it; anyone who can create jobs may archive and restore. */
+export async function setJobArchived(db: Db, ctx: Ctx, jobId: string, archived: boolean): Promise<Job> {
+  requireRole(ctx, "estimator");
+  return db.tx(async (t) => {
+    await getJob(t, ctx, jobId);
+    await t.query(`update jobs set archived_at = ${archived ? "coalesce(archived_at, now())" : "null"} where id = $1 and org_id = $2`, [jobId, ctx.orgId]);
+    await audit(t, ctx, archived ? "job.archived" : "job.restored", { jobId });
+    return getJob(t, ctx, jobId);
+  });
+}
+
+/**
+ * Delete a job and everything in it. A job that has been issued or awarded is never deleted: its revisions are frozen exactly as the client
+ * received them, so it is archived instead. A job someone has checked a package out of is refused too, so nobody loses work in progress.
+ */
+export async function deleteJob(db: Db, ctx: Ctx, jobId: string): Promise<void> {
+  requireRole(ctx, "manager");
+  await db.tx(async (t) => {
+    const job = await getJob(t, ctx, jobId);
+    const frozen = (await t.query("select 1 from tender_revisions where job_id = $1 and org_id = $2 union all select 1 from contracts where job_id = $1 and org_id = $2", [jobId, ctx.orgId])).rows.length;
+    if (frozen || job.status === "issued" || job.status === "awarded")
+      throw new HttpError(409, "job_frozen", "This tender has been issued or awarded, so it is kept exactly as sent and can't be deleted. Archive it instead.");
+    const held = (await t.query<{ name: string; holder: string }>("select u.name, l.holder from locks l join packages p on p.id = l.package_id join users u on u.id = l.holder where p.job_id = $1 and p.org_id = $2 limit 1", [jobId, ctx.orgId])).rows[0];
+    if (held) throw new HttpError(409, "job_in_use", held.holder === ctx.userId ? "You have a package of this job checked out. Check it in or release it first." : `${held.name} has a package of this job checked out. Ask them to check it in or release it, or break the lock, first.`);
+    await t.query("delete from jobs where id = $1 and org_id = $2", [jobId, ctx.orgId]);
+    await audit(t, ctx, "job.deleted", { detail: { name: job.name, status: job.status } });
+  });
+}
+
+/** A new job that starts as a copy of another's checked-in work: every package and record, at version 1, with nothing checked out. */
+export async function copyJob(db: Db, ctx: Ctx, fromJobId: string, v: NewJob): Promise<Job> {
+  requireRole(ctx, "manager");
+  const pkgs = await listPackages(db, ctx, fromJobId);
+  const recs = await jobRecordsByPackage(db, ctx, fromJobId);
+  const seeds: SeedPackage[] = pkgs.map((p) => ({ key: p.key, name: p.name, kind: p.kind as SeedPackage["kind"], records: Object.fromEntries(recs.filter((r) => r.packageId === p.id).map((r) => [r.id, r.data])) }));
+  const job = await createJob(db, ctx, v);
+  if (seeds.length) await seedPackages(db, ctx, job.id, seeds, "manager", "job.copied");
+  return job;
 }

@@ -13,6 +13,7 @@ import * as cost from "./repo/cost.js";
 import * as exports_ from "./repo/exports.js";
 import * as enquiries from "./repo/enquiries.js";
 import * as jobs from "./repo/jobs.js";
+import * as rates from "./repo/rates.js";
 import * as revisions from "./repo/revisions.js";
 import { minutes, RateLimiter } from "./ratelimit.js";
 import { SECURITY_HEADERS, webHandler } from "./web.js";
@@ -182,7 +183,32 @@ export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
   });
 
   // ---- jobs
-  app.get("/jobs", async (req) => jobs.listJobs(db, ctx(req)));
+  app.get("/jobs", async (req) => jobs.listJobs(db, ctx(req), { archived: (req.query as any)?.archived === "1" }));
+  // the register's housekeeping: archive and restore (anyone who can create jobs), delete (a manager, never an issued or awarded tender), copy
+  app.post("/jobs/:jobId/archive", async (req) => jobs.setJobArchived(db, ctx(req), idParam((req.params as any).jobId), true));
+  app.post("/jobs/:jobId/restore", async (req) => jobs.setJobArchived(db, ctx(req), idParam((req.params as any).jobId), false));
+  app.post("/jobs/:jobId/delete", async (req, reply) => {
+    await jobs.deleteJob(db, ctx(req), idParam((req.params as any).jobId));
+    return reply.status(204).send();
+  });
+  app.post("/jobs/:jobId/copy", async (req, reply) => {
+    const v = parse(z.object({ name: z.string().trim().min(1).max(200), client: z.string().trim().max(200).optional() }), req.body);
+    return reply.status(201).send(await jobs.copyJob(db, ctx(req), idParam((req.params as any).jobId), v));
+  });
+
+  // the company's resource library: rates kept across jobs (a job copies a rate into its own Rate Library when it uses it)
+  const rateFields = z.object({
+    code: z.string().max(60).optional(), category: z.string().max(100).optional(), description: z.string().max(500).optional(), unit: z.string().max(40).optional(),
+    baseRate: z.union([z.string(), z.number()]).transform(String).optional(), operatorIncluded: z.string().max(3).optional(), fuelIncluded: z.string().max(3).optional(), source: z.string().max(500).optional(),
+  });
+  app.get("/rates", async (req) => rates.listRates(db, ctx(req)));
+  app.post("/rates", async (req, reply) => reply.status(201).send(await rates.createRate(db, ctx(req), parse(rateFields, req.body))));
+  app.post("/rates/bulk", async (req, reply) => reply.status(201).send(await rates.addMissing(db, ctx(req), parse(z.object({ rates: z.array(rateFields).max(2000) }), req.body).rates)));
+  app.post("/rates/:rateId", async (req) => rates.updateRate(db, ctx(req), idParam((req.params as any).rateId), parse(rateFields, req.body)));
+  app.post("/rates/:rateId/delete", async (req, reply) => {
+    await rates.deleteRate(db, ctx(req), idParam((req.params as any).rateId));
+    return reply.status(204).send();
+  });
   const enquiryFields = {
     contactId: id.nullable().optional(), ownerId: id.nullable().optional(), dueAt: z.string().max(40).nullable().optional(),
     notes: z.string().max(2000).optional(), approxValue: z.string().max(40).optional(),

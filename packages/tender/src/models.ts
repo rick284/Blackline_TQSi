@@ -56,6 +56,8 @@ export interface BuildUpRow {
   /** Greater than 0 replaces the library rate */
   jobRateOverride?: Num;
   task?: string;
+  /** The estimator's own words for this row. Blank shows the library rate's description. */
+  description?: string;
   verified?: string;
   weatherExposed?: string;
   weatherTaskType?: string;

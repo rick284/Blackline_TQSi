@@ -132,7 +132,7 @@ export function buildModel(records: ServerRecord[]): Model {
     const recordId = `row:${src.uid}`;
     const row: BuildupRow = {
       recordId, packageId: pkgOf.get(recordId) ?? packageOfQs.get(src.qsCode) ?? "", uid: src.uid ?? "", rowId: estimate.rows[i]!.rowId,
-      src, res: estimate.rows[i]!, resource: lib.get(src.resourceCode) ?? "",
+      src, res: estimate.rows[i]!, resource: String(src.description ?? "").trim() || (lib.get(src.resourceCode) ?? ""),
     };
     buildups.set(src.qsCode, [...(buildups.get(src.qsCode) ?? []), row]);
   });

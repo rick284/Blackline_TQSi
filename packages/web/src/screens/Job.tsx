@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
-import { hrefContacts, hrefJob, hrefJobs, type View } from "../route.js";
+import { hrefContacts, hrefJob, hrefJobs, hrefLibrary, type View } from "../route.js";
 import { useSession } from "../session.js";
 import { useWorkspace } from "../workspace.js";
 import { CommercialReview } from "./CommercialReview.js";
@@ -53,6 +53,8 @@ export function Job({ jobId, view }: { jobId: string; view: View }) {
         </a>
       ))}
       <h6>Company</h6>
+      <a href={hrefJobs()}>Tender Register</a>
+      <a href={hrefLibrary()}>Resource Library</a>
       <a href={hrefContacts("enquiries")}>Contacts and Enquiries</a>
       {LATER.length > 0 && <h6>Coming later</h6>}
       {LATER.map((m) => <span key={m} className="later">{m}</span>)}

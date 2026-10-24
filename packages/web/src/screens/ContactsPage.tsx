@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api.js";
 import { type Action, type ActionHistory, none, record, stepBack, stepForward } from "../lib/actionHistory.js";
 import type { ContactRow, EnquiryJob } from "../lib/enquiries.js";
-import { type ContactsTab, hrefContacts, hrefJobs } from "../route.js";
+import { type ContactsTab, hrefJobs } from "../route.js";
 import { useSession } from "../session.js";
+import { CompanyNav } from "./CompanyNav.js";
 import { ContactList } from "./ContactList.js";
 import { EnquiryRegister } from "./EnquiryRegister.js";
 import { Shell } from "./Shell.js";
@@ -71,14 +72,7 @@ export function ContactsPage({ tab }: { tab: ContactsTab }) {
     reload: load, notify: (kind, text) => setNotice({ kind, text }), push: (a) => setHist((h) => record(h, a)),
   };
 
-  const nav = (
-    <nav className="nav" aria-label="Company">
-      <h6>Company</h6>
-      <a href={hrefJobs()}>Tender Register</a>
-      <a href={hrefContacts("enquiries")} className={tab === "enquiries" ? "active" : ""} aria-current={tab === "enquiries" ? "page" : undefined}>Enquiries</a>
-      <a href={hrefContacts("contacts")} className={tab === "contacts" ? "active" : ""} aria-current={tab === "contacts" ? "page" : undefined}>Contacts</a>
-    </nav>
-  );
+  const nav = <CompanyNav current={tab} />;
 
   return (
     <Shell crumbs={[{ label: "Tender Register", href: hrefJobs() }, { label: "Contacts and Enquiries" }, { label: tab === "enquiries" ? "Enquiries" : "Contacts" }]} nav={nav} plain>
