@@ -140,8 +140,9 @@ export function Library() {
       const detail = await api<{ records: Record<string, { kind: string; body: any }> }>("GET", `/packages/${lib.id}`);
       const mine = Object.values(detail.records).filter((r) => r.kind === "library").map((r) => toCompanyInput(r.body)).filter((r): r is NonNullable<typeof r> => !!r);
       if (mine.length === 0) { setNotice({ kind: "info", text: "That job's Rate Library has no rates to add." }); setBusy(false); return; }
-      const r = await api<{ added: number; skipped: number }>("POST", "/rates/bulk", { rates: mine });
-      setNotice({ kind: "info", text: `${r.added} rate${r.added === 1 ? "" : "s"} added to the company library${r.skipped ? `; ${r.skipped} already there, left as they are` : ""}.` });
+      const r = await api<{ added: number; skipped: number; invalid?: number }>("POST", "/rates/bulk", { rates: mine });
+      const left = (detail.records ? Object.values(detail.records).filter((x) => x.kind === "library").length : mine.length) - mine.length + (r.invalid ?? 0);
+      setNotice({ kind: r.added ? "info" : "warn", text: `${r.added} rate${r.added === 1 ? "" : "s"} added to the company library${r.skipped ? `; ${r.skipped} already there, left as they are` : ""}${left ? `; ${left} left out (a code or rate that can't be kept)` : ""}.` });
       await reload();
     } catch (e) { setNotice({ kind: "warn", text: say(e, "That job's rates could not be added.") }); }
     setBusy(false);

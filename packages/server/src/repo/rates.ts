@@ -35,9 +35,9 @@ function clean(v: RateInput, partial: boolean): Record<string, string> {
   }
   for (const [f, col] of [["operatorIncluded", "operator_included"], ["fuelIncluded", "fuel_included"]] as const) {
     if (v[f] === undefined) continue;
-    const s = String(v[f]).trim();
-    if (!["", "Yes", "No"].includes(s)) throw new HttpError(400, "bad_request", `${f} must be Yes, No or blank.`);
-    out[col] = s;
+    // workbooks hold "N/A", "yes" and the like: anything that is not clearly Yes or No is kept as blank
+    const s = String(v[f]).trim().toLowerCase();
+    out[col] = s === "yes" ? "Yes" : s === "no" ? "No" : "";
   }
   if (!partial && !out.code) throw new HttpError(400, "bad_request", "A rate needs a code.");
   return out;
@@ -96,9 +96,12 @@ export async function deleteRate(db: Db, ctx: Ctx, id: string): Promise<void> {
 }
 
 /** Add several rates at once (a job's own library, say), leaving any code already in the company library as it is. */
-export async function addMissing(db: Db, ctx: Ctx, rates: RateInput[]): Promise<{ added: number; skipped: number }> {
+export async function addMissing(db: Db, ctx: Ctx, rates: RateInput[]): Promise<{ added: number; skipped: number; invalid: number }> {
   requireRole(ctx, "estimator");
-  const cleaned = rates.map((r) => clean(r, false));
+  // a rate that can't be kept (a code with a space in it, say) is counted and left out, so it doesn't stop the others
+  const cleaned: Record<string, string>[] = [];
+  let invalid = 0;
+  for (const r of rates) { try { cleaned.push(clean(r, false)); } catch { invalid++; } }
   return db.tx(async (t) => {
     let added = 0, skipped = 0;
     for (const c of cleaned) {
@@ -107,6 +110,6 @@ export async function addMissing(db: Db, ctx: Ctx, rates: RateInput[]): Promise<
       added++;
     }
     if (added) await audit(t, ctx, "rate.bulk_added", { detail: { added, skipped } });
-    return { added, skipped };
+    return { added, skipped, invalid };
   });
 }

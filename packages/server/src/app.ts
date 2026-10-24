@@ -198,8 +198,8 @@ export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
 
   // the company's resource library: rates kept across jobs (a job copies a rate into its own Rate Library when it uses it)
   const rateFields = z.object({
-    code: z.string().max(60).optional(), category: z.string().max(100).optional(), description: z.string().max(500).optional(), unit: z.string().max(40).optional(),
-    baseRate: z.union([z.string(), z.number()]).transform(String).optional(), operatorIncluded: z.string().max(3).optional(), fuelIncluded: z.string().max(3).optional(), source: z.string().max(500).optional(),
+    code: z.string().max(60).optional(), category: z.string().max(2000).optional(), description: z.string().max(2000).optional(), unit: z.string().max(2000).optional(),
+    baseRate: z.union([z.string(), z.number()]).transform(String).optional(), operatorIncluded: z.string().max(2000).optional(), fuelIncluded: z.string().max(2000).optional(), source: z.string().max(2000).optional(),
   });
   app.get("/rates", async (req) => rates.listRates(db, ctx(req)));
   app.post("/rates", async (req, reply) => reply.status(201).send(await rates.createRate(db, ctx(req), parse(rateFields, req.body))));

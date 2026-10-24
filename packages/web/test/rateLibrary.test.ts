@@ -37,6 +37,7 @@ describe("copies between the libraries", () => {
   });
   it("leaves out a job rate that is not a plain number", () => {
     expect(toCompanyInput(job("A", "d", { baseRate: "12.50" } as Partial<LibraryRow>))?.baseRate).toBe("12.5");
+    expect(toCompanyInput(job("C", "d", { operatorIncluded: "N/A", fuelIncluded: "yes" } as Partial<LibraryRow>))).toMatchObject({ operatorIncluded: "", fuelIncluded: "Yes" });
     expect(toCompanyInput(job("B", "d", { baseRate: "n/a" } as Partial<LibraryRow>))).toBeNull();
   });
 });

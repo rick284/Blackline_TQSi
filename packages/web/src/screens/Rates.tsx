@@ -145,8 +145,9 @@ export function Rates({ ws }: { ws: Workspace }) {
     const input = rows.map(toCompanyInput).filter((r): r is NonNullable<typeof r> => !!r);
     if (!input.length) { ws.notify({ kind: "warn", text: "There is nothing to add." }); return; }
     try {
-      const r = await api<{ added: number; skipped: number }>("POST", "/rates/bulk", { rates: input });
-      ws.notify({ kind: "info", text: `${r.added} added to the company library${r.skipped ? `; ${r.skipped} already there, left as they are` : ""}.` });
+      const r = await api<{ added: number; skipped: number; invalid?: number }>("POST", "/rates/bulk", { rates: input });
+      const left = rows.length - input.length + (r.invalid ?? 0);
+      ws.notify({ kind: "info", text: `${r.added} added to the company library${r.skipped ? `; ${r.skipped} already there, left as they are` : ""}${left ? `; ${left} left out (a code or rate that can't be kept)` : ""}.` });
       await reloadCompany();
     } catch (e) { ws.notify({ kind: "warn", text: e instanceof ApiError ? (e.status === 0 ? "You are offline. This needs a connection." : e.message) : "Could not save to the company library." }); }
   };

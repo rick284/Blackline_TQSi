@@ -22,12 +22,17 @@ describe("company resource library", () => {
     expect([up.status, up.body.baseRate, up.body.description]).toEqual([200, "90", "Carpenter (qualified)"]);
 
     const bulk = await est.client.post("/rates/bulk", { rates: [{ code: "LAB-CARP", baseRate: "1" }, { code: "PL-EXC20", category: "Plant", unit: "hr", baseRate: "140" }] });
-    expect(bulk.body).toEqual({ added: 1, skipped: 1 });
-    expect(((await est.client.get("/rates")).body as any[]).map((r) => r.code)).toEqual(["LAB-CARP", "PL-EXC20"]);
+    expect(bulk.body).toEqual({ added: 1, skipped: 1, invalid: 0 });
+    // workbooks hold "N/A" in the Yes/No columns, and one bad code must not sink the rest
+    const messy = await est.client.post("/rates/bulk", { rates: [{ code: "HIST-1", baseRate: "45", operatorIncluded: "N/A", fuelIncluded: "yes" }, { code: "has space" }, { code: "HIST-2", baseRate: "50" }] });
+    expect(messy.body).toEqual({ added: 2, skipped: 0, invalid: 1 });
+    const hist = ((await est.client.get("/rates")).body as any[]).find((r) => r.code === "HIST-1");
+    expect([hist.operatorIncluded, hist.fuelIncluded]).toEqual(["", "Yes"]);
+    expect(((await est.client.get("/rates")).body as any[]).map((r) => r.code)).toEqual(["HIST-1", "HIST-2", "LAB-CARP", "PL-EXC20"]);
 
     expect((await est.client.post(`/rates/${a.body.id}/delete`)).status).toBe(403);
     expect((await mgr.client.post(`/rates/${a.body.id}/delete`)).status).toBe(204);
-    expect((await owner.get("/rates")).body).toHaveLength(1);
+    expect((await owner.get("/rates")).body).toHaveLength(3);
   });
 
   it("is private to the company", async () => {

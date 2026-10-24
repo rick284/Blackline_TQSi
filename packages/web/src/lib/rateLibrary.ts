@@ -32,10 +32,13 @@ export function libraryBody(r: Pick<CompanyRate, "code" | "category" | "descript
   return { code: r.code, category: r.category, description: r.description, unit: r.unit, baseRate: r.baseRate, operatorIncluded: r.operatorIncluded, fuelIncluded: r.fuelIncluded, source: r.source };
 }
 
+/** A workbook's Yes/No column as the library keeps it: anything but a clear yes or no (such as "N/A") is blank. */
+export const yesNo = (v: unknown) => { const s = String(v ?? "").trim().toLowerCase(); return s === "yes" ? "Yes" : s === "no" ? "No" : ""; };
+
 /** The company-library shape of a job's rate (for adding the job's rates to the company library). Rates that are not plain numbers are left out. */
 export function toCompanyInput(r: Pick<LibraryRow, "code" | "category" | "description" | "unit" | "baseRate" | "operatorIncluded" | "fuelIncluded" | "source">) {
   const baseRate = cleanRate(r.baseRate);
-  return baseRate === null ? null : { code: r.code, category: r.category, description: r.description, unit: r.unit, baseRate, operatorIncluded: r.operatorIncluded, fuelIncluded: r.fuelIncluded, source: r.source };
+  return baseRate === null ? null : { code: r.code, category: r.category, description: r.description, unit: r.unit, baseRate, operatorIncluded: yesNo(r.operatorIncluded), fuelIncluded: yesNo(r.fuelIncluded), source: r.source };
 }
 
 /** Rates a person can pick for a build-up row: the job's own, then the company's that the job does not have yet. */
