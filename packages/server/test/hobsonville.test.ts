@@ -19,6 +19,15 @@ describe("workbook import", () => {
     expect([bad.status, bad.body.error.code]).toEqual([422, "unreadable_workbook"]);
     expect((await owner.post(`/jobs/${job}/import-workbook`, {})).status).toBe(415);
   });
+
+  it("a new job from a bad file leaves no job behind, and an estimator cannot import", async () => {
+    const { owner } = await newCompany(s, "New Job Import Co");
+    const est = await addPerson(s, owner, "Eli", "estimator");
+    const bad = await owner.call("POST", "/jobs/import-workbook?name=Nope", undefined, { raw: Buffer.from("not a zip") });
+    expect([bad.status, bad.body.error.code]).toEqual([422, "unreadable_workbook"]);
+    expect((await est.client.call("POST", "/jobs/import-workbook?name=Nope", undefined, { raw: Buffer.from("x") })).status).toBe(403);
+    expect(((await owner.get("/jobs")).body as any[]).length).toBe(0);
+  });
 });
 
 describe.skipIf(!existsSync(FILE))("Hobsonville Rev34E through the server", () => {
@@ -45,6 +54,15 @@ describe.skipIf(!existsSync(FILE))("Hobsonville Rev34E through the server", () =
     expect(Number(e.consolidated.allInTender).toFixed(2)).toBe("1226916.81");
     expect(e.reconciled).toBe(true);
     expect(e.schedule.reconciles).toBe(true);
+  });
+
+  it("creates a new job straight from the workbook", async () => {
+    const { owner } = await newCompany(s, "Import As New Co");
+    const r = await owner.call("POST", "/jobs/import-workbook?name=329%20Hobsonville%20Road&client=TPW", undefined, { raw: readFileSync(FILE) });
+    expect(r.status).toBe(201);
+    expect(r.body.job.client).toBe("TPW");
+    const calc = (await owner.get(`/jobs/${r.body.job.id}/estimate`)).body.estimate;
+    expect(Number(calc.consolidated.allInTender).toFixed(2)).toBe("1226916.81");
   });
 
   it("changing one section through checkout moves the price, and only that section was locked", async () => {

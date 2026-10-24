@@ -333,6 +333,22 @@ export function buildApp(db: Db, opts: AppOptions = {}): FastifyInstance {
   });
   app.get("/revisions/:revisionId/records", async (req) => revisions.revisionRecords(db, ctx(req), idParam((req.params as any).revisionId)));
 
+  // a new job straight from a workbook: the file is read and split before the job exists, so an unreadable file leaves nothing behind
+  app.post("/jobs/import-workbook", async (req, reply) => {
+    requireRole(ctx(req), "manager");
+    const q = parse(z.object({ name: z.string().trim().min(1).max(200), client: z.string().trim().max(200).optional() }), req.query ?? {});
+    if (!Buffer.isBuffer(req.body)) throw new HttpError(415, "unsupported_media_type", "Send the .xlsx file as the request body (application/octet-stream).");
+    let wb;
+    try {
+      wb = await loadMasterWorkbook(req.body);
+    } catch (e: any) {
+      throw new HttpError(422, "unreadable_workbook", e?.message ?? "That file could not be read as a Master Estimate Workbook.");
+    }
+    const seeds = splitIntoPackages(wb);
+    const job = await jobs.createJob(db, ctx(req), q);
+    return reply.status(201).send({ job, ...(await jobs.seedPackages(db, ctx(req), job.id, seeds)), notes: wb.notes });
+  });
+
   app.post("/jobs/:jobId/import-workbook", async (req, reply) => {
     const jobId = idParam((req.params as any).jobId);
     requireRole(ctx(req), "manager");

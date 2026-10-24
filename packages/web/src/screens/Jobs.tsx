@@ -1,7 +1,7 @@
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef } from "ag-grid-community";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { api, ApiError } from "../api.js";
+import { api, ApiError, apiUpload } from "../api.js";
 import { gridTheme } from "../grid.js";
 import { hrefContacts, hrefJob } from "../route.js";
 import { useSession } from "../session.js";
@@ -18,6 +18,21 @@ export function Jobs() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", client: "" });
   const canCreate = session!.role !== "viewer";
+  const canImport = session!.role === "manager" || session!.role === "owner";
+  const [busy, setBusy] = useState(false);
+
+  /** A new tender from a Master Estimate Workbook: named from the boxes above, or the file name when the name box is empty. */
+  async function importFile(file: File | undefined) {
+    if (!file) return;
+    const name = form.name.trim() || file.name.replace(/\.xlsx$/i, "").replace(/[_]+/g, " ").trim();
+    setBusy(true); setError(null);
+    try {
+      const qs = new URLSearchParams({ name, ...(form.client.trim() ? { client: form.client.trim() } : {}) });
+      const r = await apiUpload<{ job: Job; packages: number; records: number; notes?: string[] }>(`/jobs/import-workbook?${qs}`, file);
+      window.location.hash = hrefJob(r.job.id).slice(1);
+    } catch (err) { setError(err instanceof ApiError ? err.message : "That file could not be imported."); }
+    setBusy(false);
+  }
 
   const load = useCallback(async () => {
     try { setJobs(await api<Job[]>("GET", "/jobs")); setError(null); } catch (e) { setError(e instanceof ApiError ? e.message : "Could not load the jobs."); }
@@ -45,7 +60,13 @@ export function Jobs() {
         <form className="jobform" onSubmit={create}>
           <input placeholder="New tender: job name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <input placeholder="Client" value={form.client} onChange={(e) => setForm({ ...form, client: e.target.value })} />
-          <button className="btn primary">Create tender</button>
+          <button className="btn primary" disabled={busy}>Create tender</button>
+          {canImport && (
+            <label className="btn" title="Create a tender from a Master Estimate Workbook (.xlsx). Uses the job name and client above, or the file name.">
+              {busy ? "Importing…" : "Import workbook…"}
+              <input type="file" accept=".xlsx" aria-label="Import workbook" hidden disabled={busy} onChange={(e) => { void importFile(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+          )}
           <span style={{ marginLeft: "auto" }}><a href={hrefContacts("enquiries")}>Contacts and Enquiries</a></span>
         </form>
       )}
