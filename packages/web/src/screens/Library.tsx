@@ -43,7 +43,7 @@ export function Library() {
   const justAdded = useRef<string | null>(null);
 
   useEffect(() => setLocal(rates), [rates]);
-  useEffect(() => { api<JobRef[]>("GET", "/jobs").then(setJobs).catch(() => undefined); }, []);
+  useEffect(() => { api<JobRef[]>("GET", "/jobs").then((r) => setJobs(Array.isArray(r) ? r : [])).catch(() => undefined); }, []);
 
   const categories = useMemo(() => [...new Set(local.map((r) => r.category).filter(Boolean))].sort(), [local]);
   const rows = useMemo(() => {

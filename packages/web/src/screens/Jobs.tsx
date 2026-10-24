@@ -35,7 +35,11 @@ export function Jobs() {
   const now = useMemo(() => new Date(), []);
 
   const load = useCallback(async () => {
-    try { setJobs(await api<RegisterJob[]>("GET", "/jobs?archived=1")); } catch (e) { setNotice({ kind: "warn", text: say(e, "Could not load the jobs.") }); }
+    try {
+      const r = await api<RegisterJob[]>("GET", "/jobs?archived=1");
+      if (!Array.isArray(r)) throw new Error("bad list");
+      setJobs(r);
+    } catch (e) { setNotice({ kind: "warn", text: say(e, "Could not load the jobs.") }); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 

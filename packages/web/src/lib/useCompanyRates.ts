@@ -10,7 +10,10 @@ export function useCompanyRates() {
   const [rates, setRates] = useState<CompanyRate[]>([]);
   const [loaded, setLoaded] = useState(false);
   const reload = useCallback(async () => {
-    try { setRates(await api<CompanyRate[]>("GET", "/rates")); } catch { /* offline or not allowed: the job's own library is still there */ }
+    try {
+      const r = await api<CompanyRate[]>("GET", "/rates");
+      setRates(Array.isArray(r) ? r : []); // an older server answers with its web page, not a list
+    } catch { /* offline or not allowed: the job's own library is still there */ }
     setLoaded(true);
   }, []);
   useEffect(() => { void reload(); }, [reload]);

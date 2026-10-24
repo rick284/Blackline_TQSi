@@ -4,13 +4,14 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import "./grid.js";
+import { ErrorBoundary } from "./screens/ErrorBoundary.js";
 import { SessionProvider } from "./session.js";
 import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <SessionProvider>
-      <App />
+      <ErrorBoundary><App /></ErrorBoundary>
     </SessionProvider>
   </StrictMode>,
 );
